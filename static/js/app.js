@@ -7,18 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const state = {
     currentPage: 'home',
     isLoggedIn: false,
-    messages: [
-      { role: 'bot', content: '안녕하세요! 저는 Lifeclover입니다. 무엇을 도와드릴까요?' },
-    ],
+    messages: [],
+    currentMode: 'chat', // 'chat' or 'info'
+    selectedServiceType: null, // For info mode context
+    isLoading: false
   };
 
-  const diaryEntries = {
-    '2025-11-01': { tag: '#생일', icon: '🎂', content: ['가족들과 작은 생일 파티를 즐겼어요.', '많은 축하를 받아서 감사한 하루였습니다.'] },
-    '2025-11-03': { tag: '#기억', icon: '🎀', content: ['좋은 기억들을 함께 떠올리며 웃을 수 있었어요.'] },
-    '2025-11-05': { tag: '#산책', icon: '🌻', content: ['가을 햇살을 느끼며 짧은 산책을 했습니다.', '조용한 시간이 마음을 따뜻하게 했어요.'] },
-    '2025-11-12': { tag: '#독서', icon: '📖', content: ['오랜만에 좋아하는 책을 읽으며 차분한 시간을 보냈어요.'] },
-    '2025-11-28': { tag: '#자분함', icon: '🎁', content: ['비가 오는 날이라 마음이 차분해졌네요.', "좋아하시는 영화 '인터스텔라' 이야기를 나누며 소소한 즐거움을 찾으셨습니다."] },
-  };
+  // Will be loaded from backend
+  let diaryEntries = {};
 
   const sections = document.querySelectorAll('.page-section');
   const pageTriggers = document.querySelectorAll('[data-target-page]');
@@ -31,11 +27,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const diaryDetailEl = document.querySelector('[data-diary-detail]');
   const monthButtons = document.querySelectorAll('[data-change-month]');
 
-  const diaryKeys = Object.keys(diaryEntries).sort();
-  const keyToMonth = (key) => {
-    const [y, m] = key.split('-').map(Number);
-    return new Date(y, m - 1, 1);
-  };
   const formatDateKey = (date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -43,8 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return `${y}-${m}-${d}`;
   };
 
-  let currentMonth = diaryKeys.length ? keyToMonth(diaryKeys[diaryKeys.length - 1]) : new Date();
-  let selectedDateKey = diaryKeys.length ? diaryKeys[diaryKeys.length - 1] : formatDateKey(new Date());
+  let currentMonth = new Date();
+  let selectedDateKey = formatDateKey(new Date());
 
   function switchPage(page) {
     if (!page) return;
@@ -60,11 +51,48 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.classList.toggle('active', btn.dataset.targetPage === page);
     });
 
+    // Load diaries when switching to diary page
+    if (page === 'diary') {
+      loadDiaries();
+    }
+
+    // Initialize chat when switching to chat page
+    if (page === 'chat' && state.messages.length === 0) {
+      initializeChat();
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   pageTriggers.forEach((btn) => {
     btn.addEventListener('click', () => switchPage(btn.dataset.targetPage));
+  });
+
+  // Service card click handlers
+  document.querySelectorAll('.service-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const title = card.querySelector('.service-title')?.textContent || '';
+      
+      // Map service titles to internal types
+      const serviceTypeMap = {
+        '장례 시설 안내': 'funeral_facilities',
+        '지원 정책': 'support_policy',
+        '유산 상속 안내': 'inheritance',
+        '디지털 개인 정보': 'digital_info'
+      };
+      
+      state.selectedServiceType = serviceTypeMap[title] || null;
+      state.currentMode = 'info';
+      
+      // Clear messages and add greeting
+      state.messages = [
+        { role: 'bot', content: `${title}에 대해 궁금하신 점을 말씀해주세요. 정확한 정보를 안내해드리겠습니다.` }
+      ];
+      
+      // Switch to chat page
+      switchPage('chat');
+      renderMessages();
+    });
   });
 
   function renderAuth() {
@@ -121,27 +149,122 @@ document.addEventListener('DOMContentLoaded', () => {
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
   }
 
-  function sendMessage() {
-    const text = (chatInputEl?.value || '').trim();
-    if (!text) return;
+  function initializeChat() {
+    // Add welcome message for empathy mode
+    if (state.currentMode === 'chat') {
+      state.messages = [
+        { role: 'bot', content: '안녕하세요! 오늘은 좀 어떠신가요? 편하게 말씀해주세요.' }
+      ];
+      renderMessages();
+    }
+  }
 
+  async function sendMessage() {
+    const text = (chatInputEl?.value || '').trim();
+    if (!text || state.isLoading) return;
+
+    // Add user message to UI
     state.messages.push({ role: 'user', content: text });
     renderMessages();
     if (chatInputEl) chatInputEl.value = '';
 
-    setTimeout(() => {
-      state.messages.push({ role: 'bot', content: '정성스러운 답변을 준비 중입니다... 🍀' });
+    // Show loading state
+    state.isLoading = true;
+    const loadingMsg = { role: 'bot', content: '답변을 준비하고 있습니다... 🍀' };
+    state.messages.push(loadingMsg);
+    renderMessages();
+
+    try {
+      const response = await fetch('/api/chat/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: text,
+          mode: state.currentMode,
+          service_type: state.selectedServiceType
+        })
+      });
+
+      const data = await response.json();
+
+      // Remove loading message
+      state.messages = state.messages.filter(msg => msg !== loadingMsg);
+
+      if (data.error) {
+        state.messages.push({ role: 'bot', content: `오류: ${data.error}` });
+      } else {
+        state.messages.push({ role: 'bot', content: data.response });
+        // Reset service type after first message in info mode
+        state.selectedServiceType = null;
+      }
+    } catch (error) {
+      // Remove loading message
+      state.messages = state.messages.filter(msg => msg !== loadingMsg);
+      state.messages.push({ 
+        role: 'bot', 
+        content: '서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.' 
+      });
+      console.error('Chat error:', error);
+    } finally {
+      state.isLoading = false;
       renderMessages();
-    }, 500);
+    }
   }
 
   sendButton?.addEventListener('click', sendMessage);
   chatInputEl?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
     }
   });
+
+  // Diary functionality
+  async function loadDiaries() {
+    try {
+      const response = await fetch('/api/diaries/');
+      const data = await response.json();
+
+      if (data.error) {
+        console.error('Failed to load diaries:', data.error);
+        return;
+      }
+
+      // Convert array to object keyed by date
+      diaryEntries = {};
+      data.diaries.forEach(diary => {
+        diaryEntries[diary.date] = {
+          emoji: diary.emoji,
+          tag: diary.tags,
+          content: null // Will be loaded on demand
+        };
+      });
+
+      // Update calendar display
+      renderCalendar();
+    } catch (error) {
+      console.error('Error loading diaries:', error);
+    }
+  }
+
+  async function loadDiaryDetail(dateKey) {
+    try {
+      const response = await fetch(`/api/diary/${dateKey}/`);
+      const data = await response.json();
+
+      if (data.error) {
+        console.error('Failed to load diary detail:', data.error);
+        return null;
+      }
+
+      return data.content;
+    } catch (error) {
+      console.error('Error loading diary detail:', error);
+      return null;
+    }
+  }
 
   const formatMonthTitle = (date) => `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
 
@@ -151,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return y === dateObj.getFullYear() && m === dateObj.getMonth() + 1;
   };
 
-  function renderDiaryDetail() {
+  async function renderDiaryDetail() {
     if (!diaryDetailEl) return;
     diaryDetailEl.innerHTML = '';
 
@@ -191,12 +314,17 @@ document.addEventListener('DOMContentLoaded', () => {
       info.textContent = '달력에서 날짜를 눌러 기록을 확인하세요.';
       contentEl.appendChild(info);
     } else {
-      const entry = diaryEntries[selectedDateKey];
-      if (entry?.content?.length) {
-        entry.content.forEach((text) => {
-          const p = document.createElement('p');
-          p.textContent = text;
-          contentEl.appendChild(p);
+      // Load diary content from backend
+      const diaryContent = await loadDiaryDetail(selectedDateKey);
+      
+      if (diaryContent) {
+        const lines = diaryContent.split('\n');
+        lines.forEach((line) => {
+          if (line.trim()) {
+            const p = document.createElement('p');
+            p.textContent = line;
+            contentEl.appendChild(p);
+          }
         });
       } else {
         const empty = document.createElement('p');
@@ -242,10 +370,10 @@ document.addEventListener('DOMContentLoaded', () => {
       numberEl.textContent = String(day);
       dayEl.appendChild(numberEl);
 
-      if (entry?.icon) {
+      if (entry?.emoji) {
         const iconEl = document.createElement('span');
         iconEl.className = 'calendar-day-icon';
-        iconEl.textContent = entry.icon;
+        iconEl.textContent = entry.emoji;
         dayEl.appendChild(iconEl);
       }
 
@@ -278,8 +406,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (monthTitleEl) monthTitleEl.textContent = formatMonthTitle(currentMonth);
 
   renderAuth();
-  renderMessages();
-  renderCalendar();
   switchPage(state.currentPage);
 });
 
