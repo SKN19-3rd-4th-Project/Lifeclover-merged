@@ -214,7 +214,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   sendButton?.addEventListener('click', sendMessage);
-  chatInputEl?.addEventListener('keydown', (event) => {
+
+  chatInputEl?.addEventListener('keyup', (event) => {
+    if (event.isComposing) return;
+
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       sendMessage();
