@@ -1,0 +1,885 @@
+@import url('https://fonts.googleapis.com/css2?family=Paytone+One&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #fef9e3 0%, #f9f6e8 100%);
+  color: #333;
+}
+
+a {
+  color: #c2e299;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: #a8d84f;
+}
+
+button {
+  font-family: 'Pretendard Variable', sans-serif;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+button:focus {
+  outline: none;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fef9e3 0%, #f9f6e8 100%);
+}
+
+main {
+  flex: 1;
+  width: 100%;
+}
+
+.page-section {
+  display: none !important;
+  width: 100%;
+}
+.page-section[hidden] {
+  display: none !important;
+}
+
+.page-section.active[data-page="home"] {
+  display: block !important;
+}
+
+.page-section.active[data-page="services"] {
+  display: flex !important;
+}
+
+.page-section.active[data-page="chat"] {
+  display: flex !important;
+}
+
+.page-section.active[data-page="diary"] {
+  display: block !important;
+}
+
+
+
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 40px;
+  width: 100%;
+}
+
+/* Header */
+.header {
+  background: linear-gradient(135deg, #fef9e3 0%, #f9f6e8 100%);
+  padding: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 40px;
+  position: relative;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  z-index: 1;
+}
+
+.logo:hover {
+  transform: translateY(-2px);
+  opacity: 0.8;
+}
+
+.logo-image {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.logo-text {
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #c2e299 0%, #a8d84f 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-family: 'Paytone One', sans-serif;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ecefe2;
+  padding: 16px 24px;
+  border-radius: 27px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.nav-item {
+  background: none;
+  border: none;
+  display: inline-block;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.nav-item:hover,
+.nav-item.active {
+  color: #c2e299;
+}
+
+.nav-divider {
+  color: #999;
+  font-size: 12px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.button {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 27px;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.button-login,
+.button-signup {
+  background: #e8f3bc;
+  color: #828180;
+}
+
+.button-login:hover,
+.button-signup:hover {
+  background: #d4e899;
+  transform: translateY(-2px);
+}
+
+.button-logout {
+  background: #c2e299;
+  color: #333;
+}
+
+.button-logout:hover {
+  background: #a8d84f;
+  transform: translateY(-2px);
+}
+
+/* Hero */
+.hero {
+  background: linear-gradient(135deg, #fef9e3 0%, #f9f6e8 100%);
+  min-height: calc(100vh - 90px);
+  padding: 60px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hero-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  margin-right: 15%;
+  width: 100%;
+}
+
+.hero-text-section {
+  flex: 0 1 auto;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hero-title {
+  font-size: 56px;
+  font-weight: 700;
+  color: #565656;
+  line-height: 1.2;
+  margin-bottom: 40px;
+  font-family: 'Pretendard Variable', sans-serif;
+  opacity: 0;
+  animation: slideUpFadeIn 0.8s ease-out forwards;
+}
+
+@keyframes slideUpFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-cta {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+}
+
+.cta-button {
+  padding: 16px 40px;
+  font-size: 18px;
+  font-weight: 600;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Pretendard Variable', sans-serif;
+}
+
+.cta-button.primary {
+  background: #c2e299;
+  color: #333;
+}
+
+.cta-button.primary:hover {
+  background: #a8d84f;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(162, 196, 61, 0.3);
+}
+
+.cta-button.secondary {
+  background: transparent;
+  color: #333;
+  border: 2px solid #c2e299;
+}
+
+.cta-button.secondary:hover {
+  background: #e8f3bc;
+}
+
+.hero-image-section {
+  flex: 0 1 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.clover-image {
+  max-width: 400px;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.hero-input-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+  gap: 16px;
+}
+
+.hero-input {
+  width: 100%;
+  max-width: 900px;
+  padding: 20px 24px;
+  font-size: 16px;
+  border: none;
+  border-radius: 20px;
+  background: white;
+  box-shadow: 0 -1px 37px rgba(0, 0, 0, 0.12);
+  font-family: 'Pretendard Variable', sans-serif;
+  transition: all 0.3s ease;
+}
+
+.hero-input:focus {
+  outline: none;
+  box-shadow: 0 -1px 37px rgba(0, 0, 0, 0.18);
+  transform: translateY(-4px);
+}
+
+/* Services */
+.services {
+  background: linear-gradient(135deg, #fef9e3 0%, #f9f6e8 100%);
+  padding: 80px 40px;
+  min-height: calc(100vh - 90px);
+  display: flex;
+  align-items: center;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 32px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.service-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px 24px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.service-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.service-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 12px;
+  font-family: 'Pretendard Variable', sans-serif;
+}
+
+.service-description {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Chat */
+.chatbot {
+  background: linear-gradient(135deg, #fef9e3 0%, #f9f6e8 100%);
+  min-height: calc(100vh - 90px);
+  padding: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.chat-container {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 800px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.message {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.message.user {
+  justify-content: flex-end;
+}
+
+.message.bot {
+  justify-content: flex-start;
+}
+
+.message-content {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.message.user .message-content {
+  background: #c2e299;
+  color: #333;
+}
+
+.message.bot .message-content {
+  background: #ecefe2;
+  color: #333;
+}
+
+.chat-input-area {
+  border-top: 1px solid #e0e0e0;
+  padding: 16px;
+  display: flex;
+  gap: 8px;
+  background: #f9f9f9;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: 'Pretendard Variable', sans-serif;
+  transition: all 0.3s ease;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: #c2e299;
+  box-shadow: 0 0 0 3px rgba(194, 226, 153, 0.1);
+}
+
+.send-button {
+  padding: 12px 24px;
+  background: #c2e299;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Pretendard Variable', sans-serif;
+}
+
+.send-button:hover {
+  background: #a8d84f;
+  transform: translateY(-2px);
+}
+
+.send-button:active {
+  transform: translateY(0);
+}
+
+/* Diary */
+.diary {
+  background: linear-gradient(135deg, #fef9e7 0%, #e8f5e9 100%);
+  min-height: calc(100vh - 90px);
+  padding: 60px 40px;
+}
+
+.diary-main-title {
+  font-size: 48px;
+  font-weight: 700;
+  color: #1b5e20;
+  margin-bottom: 40px;
+  text-align: center;
+  font-family: 'Pretendard Variable', sans-serif;
+}
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+.calendar-container,
+.diary-detail {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.calendar-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #2e7d32;
+}
+
+.calendar-nav {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #66bb6a;
+  cursor: pointer;
+  padding: 6px 10px;
+  transition: all 0.2s ease;
+}
+
+.calendar-nav:hover {
+  color: #2e7d32;
+  transform: scale(1.1);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calendar-day-header {
+  text-align: center;
+  color: #888;
+  font-size: 14px;
+  padding: 8px;
+  font-weight: 600;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+  padding: 8px;
+  background: #fafafa;
+}
+
+.calendar-day:hover {
+  background: #f1f8e9;
+  transform: translateY(-2px);
+}
+
+.calendar-day.has-entry {
+  border-color: #e0e0e0;
+  background: #fff;
+}
+
+.calendar-day.selected {
+  background: #c5e1a5;
+  border-color: #aed581;
+}
+
+.calendar-day-number {
+  font-size: 16px;
+  color: #2e7d32;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.calendar-day-icon {
+  font-size: 18px;
+}
+
+.diary-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.diary-date {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2e7d32;
+  font-family: 'Pretendard Variable', sans-serif;
+}
+
+.diary-tag {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border-radius: 14px;
+  font-size: 13px;
+  color: #555;
+  font-weight: 500;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #aaa;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s ease;
+}
+
+.close-btn:hover {
+  color: #333;
+}
+
+.diary-content {
+  color: #333;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.diary-content p {
+  margin: 0 0 10px 0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c2e299;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8d84f;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .container {
+    padding: 0 30px;
+  }
+
+  .header-content {
+    gap: 20px;
+  }
+
+  .logo-text {
+    font-size: 24px;
+  }
+
+  .nav-item {
+    font-size: 16px;
+  }
+
+  .hero {
+    padding: 40px 20px;
+    min-height: auto;
+  }
+
+  .hero-container {
+    flex-direction: column;
+    gap: 40px;
+    margin-right: auto;
+  }
+
+  .hero-text-section {
+    text-align: center;
+  }
+
+  .hero-cta {
+    justify-content: center;
+  }
+
+  .hero-title {
+    font-size: 38px;
+  }
+
+  .clover-image {
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 900px) {
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 20px;
+  }
+
+  .header {
+    padding: 15px 0;
+  }
+
+  .header-content {
+    flex-wrap: wrap;
+    gap: 15px;
+    justify-content: center;
+  }
+
+  .logo {
+    gap: 8px;
+  }
+
+  .logo-image {
+    width: 40px;
+    height: 40px;
+  }
+
+  .logo-text {
+    font-size: 20px;
+  }
+
+  .nav {
+    position: static;
+    transform: none;
+    order: 3;
+    flex-basis: 100%;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .nav-item {
+    font-size: 14px;
+  }
+
+  .button {
+    padding: 8px 16px;
+    font-size: 14px;
+  }
+
+  .services {
+    padding: 40px 20px;
+  }
+
+  .services-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .service-card {
+    padding: 24px 16px;
+  }
+
+  .service-icon {
+    font-size: 48px;
+  }
+
+  .service-title {
+    font-size: 20px;
+  }
+
+  .service-description {
+    font-size: 14px;
+  }
+
+  .hero {
+    padding: 30px 15px;
+  }
+
+  .hero-title {
+    font-size: 29px;
+  }
+
+  .cta-button {
+    padding: 12px 32px;
+    font-size: 16px;
+  }
+
+  .hero-input {
+    padding: 16px 16px;
+    font-size: 14px;
+  }
+
+  .clover-image {
+    max-width: 200px;
+  }
+
+  .chatbot {
+    padding: 20px;
+  }
+
+  .chat-container {
+    height: 500px;
+  }
+
+  .chat-messages {
+    padding: 16px;
+  }
+
+  .message-content {
+    max-width: 85%;
+  }
+
+  .diary {
+    padding: 40px 20px;
+  }
+
+  .diary-main-title {
+    font-size: 32px;
+  }
+
+  .calendar-container,
+  .diary-detail {
+    padding: 16px;
+  }
+
+  .calendar-title {
+    font-size: 18px;
+  }
+
+  .calendar-day-number {
+    font-size: 14px;
+  }
+
+  .calendar-day-icon {
+    font-size: 16px;
+  }
+
+  .diary-content {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0 15px;
+  }
+
+  .cta-button,
+  .button {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
