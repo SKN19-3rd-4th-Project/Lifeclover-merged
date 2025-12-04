@@ -2,7 +2,9 @@
 
 ## 📋 프로젝트 개요
 
-**Lifeclover**는 RAG(Retrieval-Augmented Generation) + LLM 기반의 챗봇과 다이어리 서비스를 제공하는 웹 애플리케이션입니다. 호스피스 케어와 노년층을 위한 감성 상담 및 정보 제공 서비스를 목표로 합니다.
+**Lifeclover**는 RAG(Retrieval-Augmented Generation) + LLM 기반의 챗봇과 다이어리 서비스를 제공하는 웹 애플리케이션입니다.
+
+Well Dying 정신을 바탕으로 Well Life를 선사하는 서비스 입니다.
 
 ---
 
