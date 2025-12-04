@@ -11,10 +11,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+# env_path = BASE_DIR.parent / '.env'
+env_path = BASE_DIR.parent.parent / '.env' # 상위 폴더의 .env 파일 경로 지정 (유출을 확실히 막기 위함)
+load_dotenv(dotenv_path=env_path)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -25,7 +28,8 @@ SECRET_KEY = "django-insecure-z3cwa3gyt=eiprl$q+b)-&vy!90imfe$ich&v650169wo%_l%8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS: list[str] = ["192.168.0.28"]
+ALLOWED_HOSTS = ['*']  # 모든 호스트 허용 (개발용)
+# ALLOWED_HOSTS: list[str] = ["192.168.0.28"]
 
 
 # Application definition

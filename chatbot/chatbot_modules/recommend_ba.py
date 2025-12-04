@@ -7,6 +7,7 @@ from pinecone import Pinecone
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.tools import tool
 from langchain_tavily import TavilySearch
+
 # 연결 상태 로깅
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
