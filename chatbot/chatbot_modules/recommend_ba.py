@@ -8,9 +8,13 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_core.tools import tool
 from langchain_tavily import TavilySearch
 
+from dotenv import load_dotenv
+load_dotenv()
+
 # 연결 상태 로깅
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 # max_results=3: 속도와 토큰 절약을 위해 상위 3개만 검색
 tavily_search = TavilySearch(max_results=3)
 tavily_search.name = "search_realtime_info_tool"
@@ -23,14 +27,17 @@ tavily_search.description = """
 [도구가 필요한 대화]
 사용자가 '요즘 날씨', '오늘 날씨', '오늘 뉴스', '날씨', '뉴스', '영화', '음악', '드라마' 정보를 구체적으로 말할 때만 사용하세요.
 """
+
 # 데이터 파일 경로
 current_dir = os.path.dirname(os.path.abspath(__file__))
 file_path = os.path.join(current_dir, '..', '..', 'data', 'conversation_rules.json')
+
 # 설정
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 TALK_INDEX_NAME = "talk-assets"
 WISDOM_INDEX_NAME = "welldying-wisdom"
 EMBEDDING_MODEL = "text-embedding-3-small"
+
 # 전역 객체 초기화
 try:
     pc = Pinecone(api_key=PINECONE_API_KEY)
@@ -38,9 +45,11 @@ try:
 except Exception as e:
     logger.warning(f"Pinecone 초기화 실패: {e}")
     index = None
+
 # 대화 규칙
 with open(file_path, 'r', encoding='utf-8') as f:
     RULES = json.load(f)
+
 @tool
 def recommend_activities_tool(user_emotion: str, mobility_status: str = "거동 가능") -> str:
     """
@@ -84,6 +93,7 @@ def recommend_activities_tool(user_emotion: str, mobility_status: str = "거동 
   
     print("[Tool] 검색 결과\n", results)
     return "\n".join(results)
+
 @tool
 def search_empathy_questions_tool(context: str) -> str:
     """
@@ -107,6 +117,7 @@ def search_empathy_questions_tool(context: str) -> str:
   
     print(f"[Tool 질문]\n {questions}")
     return "\n".join(questions) if questions else "적절한 질문이 없습니다."
+
 @tool
 def search_welldying_wisdom_tool(topic: str) -> str:
     """
@@ -144,6 +155,7 @@ def search_welldying_wisdom_tool(topic: str) -> str:
   
     print("[Tool 지식 검색]", results)
     return "\n---\n".join(results)
+    
 # 외부 모듈에서 import 할 수 있도록 TOOLS 리스트 정의
 TOOLS = [recommend_activities_tool, search_empathy_questions_tool, search_welldying_wisdom_tool]
 

@@ -41,6 +41,14 @@ class DiaryManager:
         # 기존 다이어리 로드 (통합용)
         existing_diary = self.session_manager.get_diary_entry(user_id, today_str)
         
+        # [Fix] 기존 다이어리에서 헤더(날짜/이모지/태그) 제거하고 본문만 추출
+        if existing_diary and "\n\n" in existing_diary:
+             # 첫 번째 빈 줄 이후가 본문
+            parts = existing_diary.split("\n\n", 1)
+            # 만약 첫 부분이 헤더 형식([...])이라면 제외
+            if parts[0].strip().startswith("["):
+                existing_diary = parts[1].strip()
+        
         # 2. 프롬프트 구성 (기존 conversation_engine.py의 로직 이관)
         prompt = f"""
         당신은 사용자의 하루를 따뜻하고 아름다운 언어로 기록해주는 '감성 회고록 작가'입니다.
