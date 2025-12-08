@@ -1,26 +1,13 @@
 import logging
 from typing import TypedDict, Annotated, List, Literal, Dict, Any
 
-<<<<<<< HEAD
-# LangChain / LangGraph
-=======
 # LangChain / LangGraph Imports
->>>>>>> info_2
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode
 from langgraph.graph.message import add_messages
 
-<<<<<<< HEAD
-# Custom
-from chatbot_modules.llm_client import LLMClient
-from chatbot_modules.session_manager import SessionManager
-from chatbot_modules.recommend_ba import TOOLS
-from chatbot_modules.diary_manager import DiaryManager
-
-# Agents
-=======
 # Custom Modules
 from chatbot_modules.llm_client import LLMClient
 from chatbot_modules.session_manager import SessionManager
@@ -28,186 +15,95 @@ from chatbot_modules.recommend_ba import TOOLS_TALK
 from chatbot_modules.search_info import TOOLS_INFO
 
 # Separated Agents
->>>>>>> info_2
 from chatbot_modules.empathy_agent import empathy_node
 from chatbot_modules.info_agent import info_node
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-<<<<<<< HEAD
-# ==============================================================================
-# [LangGraph State] 상태 정의
-# ==============================================================================
-class AgentState(TypedDict):
-    messages: Annotated[List[BaseMessage], add_messages]
-    user_profile: Dict[str, Any]
-    current_mode: Literal["chat", "info"]
-    seriousness_score: float 
 
-# ==============================================================================
-# [Main] ConversationEngine
-# ==============================================================================
-=======
-# LangGraph 상태 정의 (메세지, 사용자 정보, 현재 모드)
+# ---------------------------------------------------------------------------
+# LangGraph 상태 정의
+# ---------------------------------------------------------------------------
 class AgentState(TypedDict):
-    # add_messages: 리스트를 덮어쓰지 않고 append(추가)하는 Reducer 함수
+    # messages: LangGraph에서 메시지 리스트를 누적 관리하기 위한 상태
+    # add_messages(리듀서): 리스트를 덮어쓰지 않고 계속 append해 주는 함수
     messages: Annotated[List[BaseMessage], add_messages]
+    # user_profile: 사용자 성향, 나이, 기본 정보 등 세션에 저장할 정보
     user_profile: Dict[str, Any]
+    # current_mode: 'chat'(공감/대화 모드) vs 'info'(정보 검색 모드)
     current_mode: Literal["chat", "info"]
 
-# [Conversaion Engine] 대화의 흐름을 제어하는 메인 클래스
->>>>>>> info_2
+
+# ---------------------------------------------------------------------------
+# ConversationEngine: 대화 흐름을 제어하는 메인 클래스
+# ---------------------------------------------------------------------------
 class ConversationEngine:
     def __init__(self):
         self.llm_client = LLMClient()
         self.session_manager = SessionManager()
         self.memory = MemorySaver()
-<<<<<<< HEAD
-        self.diary_manager = DiaryManager()
 
-        self.app = self._build_graph()
-        self.waiting_for_diary_confirm = False # [테스트] 다이어리 생성 대기 플래그 (UI 버튼 시뮬레이션용)
-
-    # --------------------------------------------------------------------------
-    # Graph Logic
-    # --------------------------------------------------------------------------
-    def _build_graph(self):
-        workflow = StateGraph(AgentState)
-
-        # 1. Nodes
-        workflow.add_node("empathy_agent", empathy_node)
-        workflow.add_node("info_agent", info_node)
-        workflow.add_node("tools", ToolNode(TOOLS))
-
-        # 2. Edges
-=======
-        self.app = self._build_graph()
+        # 사용자가 "종료", "잘자" 등 말하면 다이어리를 생성하도록 트리거로 사용
         self.diary_triggers = ["종료", "그만", "잘자", "내일 봐", "다이어리 써줘"]
 
+        # LangGraph 컴파일된 앱
+        self.app = self._build_graph()
+
+    # -----------------------------------------------------------------------
+    # Graph 구성
+    # -----------------------------------------------------------------------
     def _build_graph(self):
         workflow = StateGraph(AgentState)
 
-        # 1. Nodes 등록 (분리된 모듈에서 가져온 함수 사용)
-        workflow.add_node("empathy_agent", empathy_node)
-        workflow.add_node("info_agent", info_node)
-        workflow.add_node("tools_talk", ToolNode(TOOLS_TALK))
-        workflow.add_node("tools_info", ToolNode(TOOLS_INFO))
+        # 1. 노드 등록
+        workflow.add_node("empathy_agent", empathy_node)     # 공감/대화 에이전트
+        workflow.add_node("info_agent", info_node)           # 정보 검색 에이전트
+        workflow.add_node("tools_talk", ToolNode(TOOLS_TALK))  # 대화 관련 도구
+        workflow.add_node("tools_info", ToolNode(TOOLS_INFO))  # 정보 검색 도구
 
-        # 2. Edges & Routing
-        # Entry Point: 현재 모드에 따라 시작 노드 결정
->>>>>>> info_2
+        # 2. Entry Point: current_mode에 따라 시작 노드 분기
         workflow.set_conditional_entry_point(
             self._route_mode,
-            {"empathy_agent": "empathy_agent", "info_agent": "info_agent"}
+            {
+                "empathy_agent": "empathy_agent",
+                "info_agent": "info_agent",
+            },
         )
 
-<<<<<<< HEAD
-        workflow.add_conditional_edges(
-            "empathy_agent",
-            self._should_continue,
-            {"tools": "tools", END: END}
-        )
-        workflow.add_edge("tools", "empathy_agent")
-        workflow.add_edge("info_agent", END)
-
-        workflow.add_conditional_edges(
-            "info_agent",
-            self._should_continue,
-            {"tools": "tools", END: END}
-        )
-
-        workflow.add_conditional_edges(
-            "tools",
-            self._route_after_tool,
-            {"empathy_agent": "empathy_agent", "info_agent": "info_agent"}
-        )
-
-        return workflow.compile(checkpointer=self.memory)
-
-    # --------------------------------------------------------------------------
-    # Routing Logic
-    # --------------------------------------------------------------------------
-    def _route_mode(self, state: AgentState):
-        mode = state.get("current_mode", "chat")
-        if mode == "info": return "info_agent"
-        return "empathy_agent"
-
-    def _should_continue(self, state: AgentState):
-        if state["messages"][-1].tool_calls:
-            return "tools"
-        return END
-        
-    def _route_after_tool(self, state: AgentState):
-        mode = state.get("current_mode", "chat")
-        if mode == "info": 
-            return "info_agent"
-        return "empathy_agent"
-
-    # --------------------------------------------------------------------------
-    # Diary Logic
-    # --------------------------------------------------------------------------
-    def generate_diary_summary(self, user_id: str) -> str:
-        """
-        오늘의 대화 내용을 요약하여 다이어리를 생성합니다.
-        기존에 작성된 다이어리가 있다면 내용을 통합합니다.
-        """
-        return self.diary_manager.create_diary_for_today(user_id)
-    
-    # 다이어리 생성 트리거 -> UI상에서 다이어리탭을 누른 것으로 간주
-    def _check_diary_trigger(self, text: str) -> bool:
-        return text.strip() == "다이어리"
-
-    # --------------------------------------------------------------------------
-    # Chat Logic
-    # --------------------------------------------------------------------------
-    def process_user_message(self, user_id: str, text: str, mode: str = "chat") -> str:
-        # --- 다이어리 ---
-        # 생성 확인 (Y/N)
-        if self.waiting_for_diary_confirm:
-            if text.lower() in ['y', 'yes', '네', '응']:
-                self.waiting_for_diary_confirm = False
-                
-                # 생성 전 대화 내용 확인
-                chat_history = self.session_manager.export_user_history(user_id)
-                if not chat_history or chat_history == "오늘 나눈 대화가 없습니다.":
-                    return "오늘 나눈 대화가 없어 다이어리를 생성할 수 없습니다."
-                
-                return self.generate_diary_summary(user_id)
-            else:
-                self.waiting_for_diary_confirm = False
-                return "다이어리 생성을 취소했습니다. 대화를 계속할까요?"
-
-        # 다이어리 버튼 트리거 확인
-        if self._check_diary_trigger(text):
-            self.waiting_for_diary_confirm = True
-            return "오늘 나눈 대화로 다이어리를 생성할까요? (Y/N)"
-
-        # --- 일반 대화 처리 ---
-        session = self.session_manager.load_session(user_id)
-        profile = session.get("user_profile", {})
-        
-=======
-        # Empathy Agent -> Tool 사용 여부 확인
+        # 3. 공감 에이전트에서 Tool 호출 여부 체크
         workflow.add_conditional_edges(
             "empathy_agent",
             self._should_continue_talk,
-            {"tools_talk": "tools_talk", END: END}
+            {
+                "tools_talk": "tools_talk",
+                END: END,
+            },
         )
+
+        # 4. 정보 에이전트에서 Tool 호출 여부 체크
         workflow.add_conditional_edges(
             "info_agent",
             self._should_continue_info,
-            {"tools_info": "tools_info", END: END}
+            {
+                "tools_info": "tools_info",
+                END: END,
+            },
         )
-        workflow.add_edge("tools_talk", "empathy_agent") # 툴 실행 후 다시 에이전트로 복귀
-        workflow.add_edge("tools_info", "info_agent") # 툴 실행 후 다시 에이전트로 복귀
-        
+
+        # 5. 툴 실행 후 다시 해당 에이전트로 복귀
+        workflow.add_edge("tools_talk", "empathy_agent")
+        workflow.add_edge("tools_info", "info_agent")
 
         return workflow.compile(checkpointer=self.memory)
 
-    # 라우팅
+    # -----------------------------------------------------------------------
+    # 라우팅 로직
+    # -----------------------------------------------------------------------
     def _route_mode(self, state: AgentState):
-        """State의 current_mode를 확인하여 경로 분기"""
+        """
+        current_mode 값을 보고 'empathy_agent' 또는 'info_agent'로 분기
+        """
         mode = state.get("current_mode", "chat")
         logger.info(f"[Router] Current Mode: {mode}")
         if mode == "info":
@@ -215,21 +111,34 @@ class ConversationEngine:
         return "empathy_agent"
 
     def _should_continue_talk(self, state: AgentState):
-        """Tool Call 존재 여부 확인"""
+        """
+        공감/대화 에이전트 쪽에서 Tool을 호출해야 하는지 검사.
+
+        last_message.tool_calls(툴 호출 정보)가 있으면 tools_talk로,
+        없으면 그래프 종료(END).
+        """
         last_message = state["messages"][-1]
         if last_message.tool_calls:
             return "tools_talk"
         return END
 
     def _should_continue_info(self, state: AgentState):
-        """Tool Call 존재 여부 확인"""
+        """
+        정보 에이전트 쪽에서 Tool을 호출해야 하는지 검사.
+        """
         last_message = state["messages"][-1]
         if last_message.tool_calls:
             return "tools_info"
         return END
 
-    # 다이어리 생성
+    # -----------------------------------------------------------------------
+    # 다이어리 생성 로직
+    # -----------------------------------------------------------------------
     def generate_diary_summary(self, user_id: str) -> str:
+        """
+        세션에 저장된 사용자 대화 히스토리를 불러와
+        '오늘의 다이어리' 형식의 텍스트를 생성한다.
+        """
         history_text = self.session_manager.export_user_history(user_id)
         prompt = f"""
         당신은 사용자의 하루를 따뜻하게 기록해주는 '회고록 작가'입니다.
@@ -241,68 +150,63 @@ class ConversationEngine:
         return self.llm_client.generate_text("당신은 에세이 작가입니다.", prompt)
 
     def _check_diary_trigger(self, text: str) -> bool:
+        """
+        사용자의 입력 문장에 다이어리 종료/마무리 트리거가 포함되어 있는지 검사.
+        """
         return any(trigger in text for trigger in self.diary_triggers)
 
-    # Public Interface
+    # -----------------------------------------------------------------------
+    # Public Interface: UI에서 직접 호출하는 메소드
+    # -----------------------------------------------------------------------
     def process_user_message(self, user_id: str, text: str, mode: str = "chat") -> str:
         """
-        [Main Interface]
-        UI에서 사용자가 선택한 mode(토글 상태)를 인자로 받습니다.
+        UI에서 호출하는 메인 엔트리 포인트.
+
+        - user_id: 사용자 식별자 (세션 구분용)
+        - text: 사용자가 보낸 메시지
+        - mode: 'chat' 또는 'info' (UI 토글 상태)
         """
+
         # 1. 세션 로드
         session = self.session_manager.load_session(user_id)
         profile = session.get("user_profile", {})
-        
-        # 2. LangGraph 실행 입력값 구성
-        # UI에서 전달받은 mode를 State에 주입합니다.
->>>>>>> info_2
+
+        # 2. LangGraph 실행을 위한 입력값 구성
         config = {"configurable": {"thread_id": user_id}}
         inputs = {
             "messages": [HumanMessage(content=text)],
             "user_profile": profile,
-<<<<<<< HEAD
-            "current_mode": mode
+            "current_mode": mode,
         }
-        
+
+        # 사용자가 보낸 메시지는 바로 세션에 기록 (다이어리용 로그)
+        self.session_manager.add_message(user_id, "user", text)
+
         response_text = ""
-=======
-            "current_mode": mode 
-        }
-        self.session_manager.add_message(user_id, "user", text)  # 시간을 위해 위치조정      
-        response_text = ""
-        
+
         # 3. 그래프 스트리밍 실행
->>>>>>> info_2
         try:
             for event in self.app.stream(inputs, config=config):
                 for k, v in event.items():
                     if "messages" in v:
                         msg = v["messages"][-1]
+                        # tool 호출 결과가 아닌, 실제 AI 답변만 추출
                         if isinstance(msg, AIMessage) and not msg.tool_calls:
                             response_text = msg.content
         except Exception as e:
-<<<<<<< HEAD
-            logger.error(f"Error: {e}")
-            return "오류가 발생했습니다."
-
-        # 대화 저장 (다이어리 소스)
-        self.session_manager.add_message(user_id, "user", text)
-        self.session_manager.add_message(user_id, "assistant", response_text)
-
-=======
             logger.error(f"Error during graph execution: {e}")
             return "시스템 오류가 발생했습니다."
 
-        # 4. 대화 내용 저장
-
+        # 4. 어시스턴트 답변도 세션에 저장
         self.session_manager.add_message(user_id, "assistant", response_text)
 
-        # 5. 다이어리 트리거 확인
+        # 5. 다이어리 트리거가 포함된 입력인지 확인
         if self._check_diary_trigger(text):
             diary = self.generate_diary_summary(user_id)
-            response_text += f"\n\n[시스템]: 대화를 마무리하며 오늘의 다이어리를 작성했습니다.\n\n{diary}"
+            response_text += (
+                f"\n\n[시스템]: 대화를 마무리하며 오늘의 다이어리를 작성했습니다.\n\n{diary}"
+            )
             # 종료 시 마지막 방문 시간 업데이트
             self.session_manager.update_last_visit(user_id)
 
->>>>>>> info_2
         return response_text

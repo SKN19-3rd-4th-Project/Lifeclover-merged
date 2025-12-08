@@ -1,26 +1,3 @@
-<<<<<<< HEAD
-# empathy_agent.py
-# 역할: v1 / v2 / v3 중에서 선택해서 불러오기
-
-# ==============================================================================
-# 버전 선택 (이 한 줄만 바꾸면 됨!)
-# ==============================================================================
-PROMPT_VERSION = "v2"  # "v1", "v2", "v3" 중에서 선택
-
-# ==============================================================================
-# 버전별 import
-# ==============================================================================
-if PROMPT_VERSION == "v1":
-    from chatbot_modules.chatbot_prompts.empathy.v1 import empathy_node
-elif PROMPT_VERSION == "v2":
-    from chatbot_modules.chatbot_prompts.empathy.v2 import empathy_node
-elif PROMPT_VERSION == "v3":
-    from chatbot_modules.chatbot_prompts.empathy.v3 import empathy_node
-else:
-    raise ValueError(f"Unknown PROMPT_VERSION: {PROMPT_VERSION}")
-
-__all__ = ["empathy_node"]
-=======
 import logging
 
 from langchain_core.messages import SystemMessage
@@ -113,11 +90,13 @@ SYSTEM_PROMPT_TEMPLATE = f"""
 - "지금 ~~라고 느끼고 계시는군요." (X, 분석체)
 - "꼭 ~~해보세요." (X, 숙제/강요)
 """
-# ==============================================================================
+
 
 def empathy_node(state):
     """
-    감성 대화 모드 에이전트 노드
+    감성 대화 모드 에이전트 노드.
+
+    - state: LangGraph 상태(메시지, user_profile 등)가 들어있는 딕셔너리.
     """
     logger.info(">>> [Agent Active] Empathy Agent")
     
@@ -128,7 +107,7 @@ def empathy_node(state):
     system_msg = SYSTEM_PROMPT_TEMPLATE.format(
         user_name=profile.get("name", "사용자"),
         user_age=profile.get("age", "미상"),
-        user_mobility=profile.get("mobility", "거동 가능")
+        user_mobility=profile.get("mobility", "거동 가능"),
     )
     
     # 3. Tool 바인딩된 LLM 호출
@@ -141,4 +120,6 @@ def empathy_node(state):
     response = model.invoke(messages)
     
     return {"messages": [response]}
->>>>>>> info_2
+
+
+__all__ = ["empathy_node"]

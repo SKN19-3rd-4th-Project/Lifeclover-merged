@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Python
 __pycache__/
 *.py[cod]
@@ -8,6 +8,9 @@ __pycache__/
 
 # Environments
 .env
+*.env
+*.keras
+*.model
 .venv
 env/
 venv/
@@ -31,11 +34,7 @@ node_modules/
 
 # Others
 coverage/
-=======
-.env
-*.env
-*.keras
-*.model
+
 /chatbot/sessions/
 __pycache__/
->>>>>>> info_2
+
