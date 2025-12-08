@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Python
 __pycache__/
 *.py[cod]
@@ -30,3 +31,11 @@ node_modules/
 
 # Others
 coverage/
+=======
+.env
+*.env
+*.keras
+*.model
+/chatbot/sessions/
+__pycache__/
+>>>>>>> info_2

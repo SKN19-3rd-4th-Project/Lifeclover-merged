@@ -1,16 +1,22 @@
 import os
 import json
 import logging
+<<<<<<< HEAD
 import glob
 from datetime import datetime
 from typing import Dict, Any, List
 import uuid
+=======
+from datetime import datetime
+from typing import Dict, Any
+>>>>>>> info_2
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class SessionManager:
     """
+<<<<<<< HEAD
     사용자 세션 및 기록 관리 (UUID 기반 / 날짜별 분리 저장)
     구조:
       chatbot/sessions/{uuid}/
@@ -21,10 +27,16 @@ class SessionManager:
              └── 2025-12-06.txt
     """
     def __init__(self, storage_path: str = "chatbot/sessions"):
+=======
+    사용자 세션 및 기록 관리
+    """
+    def __init__(self, storage_path: str = "sessions"):
+>>>>>>> info_2
         self.storage_path = storage_path
         if not os.path.exists(storage_path):
             os.makedirs(storage_path)
 
+<<<<<<< HEAD
     def generate_user_id(self) -> str:
         """새로운 사용자 UUID 생성"""
         return str(uuid.uuid4())
@@ -59,6 +71,26 @@ class SessionManager:
         # 1. Load Profile
         profile_path = self._get_profile_path(user_id)
         session_data = {
+=======
+    def _get_file_path(self, user_id: str) -> str:
+        return os.path.join(self.storage_path, f"{user_id}.json")
+
+    def load_session(self, user_id: str) -> Dict[str, Any]:
+        """세션 로드 (호환성 보장)"""
+        file_path = self._get_file_path(user_id)
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    session = json.load(f)
+                    if "last_visit" not in session:
+                        session["last_visit"] = None
+                    return session
+            except Exception as e:
+                logger.error(f"세션 로드 실패: {e}")
+        
+        # 기본 세션 구조
+        return {
+>>>>>>> info_2
             "user_id": user_id,
             "last_visit": None,
             "user_profile": {
@@ -70,6 +102,7 @@ class SessionManager:
             "conversation_history": []
         }
 
+<<<<<<< HEAD
         if os.path.exists(profile_path):
             try:
                 with open(profile_path, 'r', encoding='utf-8') as f:
@@ -145,11 +178,28 @@ class SessionManager:
             except:
                 pass
         
+=======
+    def save_session(self, user_id: str, data: Dict[str, Any]):
+        file_path = self._get_file_path(user_id)
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            logger.error(f"세션 저장 실패: {e}")
+
+    def add_message(self, user_id: str, role: str, content: str):
+        """
+        대화 기록 추가
+        시간순으로 대화 내역을 보존
+        """
+        session = self.load_session(user_id)
+>>>>>>> info_2
         message_entry = {
             "timestamp": datetime.now().isoformat(),
             "role": role,
             "content": content
         }
+<<<<<<< HEAD
         messages.append(message_entry)
         self.save_history(user_id, messages)
 
@@ -161,6 +211,23 @@ class SessionManager:
 
     def get_welcome_message(self, user_id: str) -> str:
         """환영 인사 생성"""
+=======
+        session["conversation_history"].append(message_entry)
+        self.save_session(user_id, session)
+
+    def update_last_visit(self, user_id: str):
+        """종료 시 마지막 방문 시간 업데이트"""
+        session = self.load_session(user_id)
+        session["last_visit"] = datetime.now().isoformat()
+        self.save_session(user_id, session)
+
+    def get_welcome_message(self, user_id: str) -> str:
+        """
+        환영 인사
+        재접속 간격에 따른 반응 생성
+        0: 24시간 이내 / 1: 하루 / 2~: 장시간 / 기타: 첫만남
+        """
+>>>>>>> info_2
         session = self.load_session(user_id)
         name = session.get("user_profile", {}).get("name", "")
         last_visit_str = session.get("last_visit")
@@ -177,11 +244,16 @@ class SessionManager:
             elif days_diff == 1:
                 return f"{title}, 밤사이 편안하셨나요?"
             else:
+<<<<<<< HEAD
                 return f"{title}, 다시 뵙게 되어 반갑습니다."
+=======
+                return f"{title}, 오랜만에 오셨네요!"
+>>>>>>> info_2
         except:
             return f"안녕하세요, {title}."
 
     def export_user_history(self, user_id: str) -> str:
+<<<<<<< HEAD
         """오늘의 대화 기록 내보내기 (다이어리용)"""
         # 현재 날짜의 히스토리만 로드
         history_path = self._get_history_path(user_id)
@@ -277,3 +349,16 @@ class SessionManager:
         
         metadata_list.sort(key=lambda x: x["date"])
         return metadata_list
+=======
+        """다이어리 생성을 위한 기록 추출"""
+        session = self.load_session(user_id)
+        history = session.get("conversation_history", [])
+        
+        lines = []
+        for msg in history:
+            role = "나" if msg['role'] == 'user' else "AI"
+            time = msg['timestamp'][:16].replace("T", " ")
+            lines.append(f"[{time}] {role}: {msg['content']}")
+            
+        return "\n".join(lines) if lines else "대화 기록 없음"
+>>>>>>> info_2

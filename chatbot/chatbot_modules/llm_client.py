@@ -1,8 +1,18 @@
+<<<<<<< HEAD
 # 중복 코드 삭제합니다. (settings.py에서 환경 변수 관리)
 import os
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
+=======
+import os
+from dotenv import load_dotenv
+
+from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage
+
+load_dotenv()
+>>>>>>> info_2
 api_key = os.getenv("OPENAI_API_KEY")
 model_name = "gpt-4o"
 
