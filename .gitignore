@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Django
+*.log
+*.pot
+*.pyc
+*.sqlite3
+*.sqlite3-journal
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Node (if ever used)
+node_modules/
+
+# Others
+coverage/
