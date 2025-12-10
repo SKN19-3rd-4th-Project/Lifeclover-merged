@@ -1,5 +1,4 @@
 import logging
-
 from langchain_core.messages import SystemMessage
 
 from chatbot_modules.llm_client import LLMClient
@@ -7,8 +6,10 @@ from chatbot_modules.recommend_ba import TOOLS_TALK
 
 logger = logging.getLogger(__name__)
 
-# 프롬프트
 # ==============================================================================
+# 프롬프트 (v1)
+# ==============================================================================
+
 ACTIVITY_SYSTEM_PROMPT = """
 [활동 제안 원칙]
 당신은 마음이 지친 분에게 작은 환기활동을 제안하는 호스피스 케어기버입니다.
@@ -25,6 +26,13 @@ CHOICE_SYSTEM_PROMPT = """
 2. 그 후, "혹시 괜찮으시다면...", "부담 없으시다면..." 처럼 아주 부드러운 톤으로 활동 찾기를 제안하세요.
 3. "지금처럼 이야기를 이어가도 괜찮다"는 여지를 반드시 남기세요.
 4. 전체 2~3문장으로 짧게 하세요.
+"""
+
+SEARCH_GUIDELINE_PROMPT = """
+[검색 도구 사용 원칙]
+- 'search_realtime_info_tool'은 사용자가 날씨, 최신 뉴스, 특정 시사 이슈 등 **'지금 현재의 정보'**를 물어볼 때만 제한적으로 사용하세요.
+- "우울해", "힘들어" 같은 감정적 호소에는 절대 검색 도구를 쓰지 말고, 공감과 위로로 응대하세요.
+- 검색 결과를 전달할 때도 딱딱한 정보 전달자가 아닌, "뉴스에서 봤는데 요즘은 이렇다더라고요~" 하는 식의 **대화체**로 자연스럽게 녹여내세요.
 """
 
 FEW_SHOT_EXAMPLES = """
@@ -61,6 +69,9 @@ SYSTEM_PROMPT_TEMPLATE = f"""
 대화의 중 활동을 제안할지 이야기를 계속 이어나갈지를 선택할 때는 다음 패턴을 참고하세요:
 {CHOICE_SYSTEM_PROMPT}
 
+실시간 정보를 검색해올 때는 다음 패턴을 참고하세요:
+{SEARCH_GUIDELINE_PROMPT}
+
 [대화 원칙]
 1. 위 예시처럼 사용자의 감정에 먼저 깊이 공감하고, 따뜻하고 정중한 어조를 유지하세요.
 2. 해결책을 섣불리 제시하기보다, 감정을 읽어주는 것을 우선시하세요.
@@ -91,35 +102,84 @@ SYSTEM_PROMPT_TEMPLATE = f"""
 - "꼭 ~~해보세요." (X, 숙제/강요)
 """
 
+SERIOUSNESS_ANALYZER_PROMPT = """
+당신은 대화의 '무게감(Seriousness)'을 파악하고, 내담자의 깊이 있는 고민을 분석하고 동시에 공감해주는 상담사입니다.
+사용자의 마지막 발화가 얼마나 진지하고 무거운 주제(죽음, 삶의 의미, 깊은 슬픔 등)를 다루는지 0점에서 10점 사이의 점수로 평가하세요.
+
+[기준]
+- 0~2점: 가벼운 인사, 농담, 단순 정보 요청
+- 3~6점: 일상적인 고민, 가벼운 우울감
+- 7~10점: 죽음에 대한 언급, 깊은 회한, 삶의 본질적 질문, 철학적 담론
+
+반환 형식: 숫자만 반환하세요 (예: 7)
+"""
+
+# ==============================================================================
+# 로직 (v1)
+# ==============================================================================
+
+def _calculate_new_score(current_score: float, input_weight: int) -> float:
+    """모멘텀 방식 업데이트: New = (Old * alpha) + (Input * (1-alpha))"""
+    alpha = 0.7 
+    normalized_input = input_weight / 10.0  # 0~1 스케일로 정규화
+    return round((current_score * alpha) + (normalized_input * (1 - alpha)), 2)
 
 def empathy_node(state):
-    """
-    감성 대화 모드 에이전트 노드.
-
-    - state: LangGraph 상태(메시지, user_profile 등)가 들어있는 딕셔너리.
-    """
-    logger.info(">>> [Agent Active] Empathy Agent")
+    """감성 대화 모드 에이전트 노드 (v1)"""
+    logger.info(">>> [Agent Active] Empathy Agent v1")
     
-    # 1. 사용자 프로필 로드
+    # 데이터 로드
     profile = state.get("user_profile", {})
+    current_seriousness = state.get("seriousness_score", 0.0)
+    messages = state["messages"]
     
-    # 2. 시스템 프롬프트 포맷팅
+    # 마지막 사용자 메시지 확인
+    last_msg = messages[-1]
+    input_weight = 0
+    
+    llm_client = LLMClient()
+
+    if isinstance(last_msg, type(messages[0])) and not hasattr(last_msg, 'tool_calls'): 
+        # 사용자의 텍스트 발화일 때만 무게감 측정
+        try:
+            weight_res = llm_client.generate_text(
+                SERIOUSNESS_ANALYZER_PROMPT, 
+                f"사용자 발화: {last_msg.content}"
+            )
+            input_weight = int(''.join(filter(str.isdigit, weight_res)))
+        except:
+            input_weight = 3  # 기본값
+
+        # 진지함 점수 업데이트
+        new_seriousness = _calculate_new_score(current_seriousness, input_weight)
+        logger.info(f"⚖️ 진지함 점수: {current_seriousness} -> {new_seriousness} (입력무게: {input_weight})")
+    else:
+        # 사용자의 발화가 아니면 점수를 유지
+        new_seriousness = current_seriousness
+        
+    # Deep Mode 적용
+    wisdom_instruction = ""
+    if new_seriousness >= 0.6:
+        wisdom_instruction = """
+        [중요 지침: 심오한 대화 모드]
+        현재 대화의 흐름이 매우 진지합니다. 가벼운 위로보다는 '전문적이고 철학적인' 태도가 필요합니다.
+        1. 반드시 'search_welldying_wisdom_tool'을 사용하여 인류의 지혜를 검색하세요.
+        2. 페르소나 변경: 단순한 친구가 아닌, 삶과 죽음의 의미를 함께 탐구하는 '지혜로운 산파(Midwife)' 역할을 하세요.
+        3. 상투적인 위로("다 잘 될 거예요")를 금지합니다. 대신 검색된 철학적 내용을 인용하여 사유를 유도하세요.
+        """
+
     system_msg = SYSTEM_PROMPT_TEMPLATE.format(
         user_name=profile.get("name", "사용자"),
         user_age=profile.get("age", "미상"),
-        user_mobility=profile.get("mobility", "거동 가능"),
-    )
+        user_mobility=profile.get("mobility", "거동 가능")
+    ) + f"\n{wisdom_instruction}"
     
-    # 3. Tool 바인딩된 LLM 호출
-    llm_client = LLMClient()
+    # LLM 호출
     model = llm_client.get_model_with_tools(TOOLS_TALK)
+    response = model.invoke([SystemMessage(content=system_msg)] + messages)
     
-    # 메시지 리스트 구성: System Prompt + 대화 히스토리
-    messages = [SystemMessage(content=system_msg)] + state["messages"]
-    
-    response = model.invoke(messages)
-    
-    return {"messages": [response]}
-
-
-__all__ = ["empathy_node"]
+    # State 업데이트
+    return {
+        "messages": [response],
+        "seriousness_score": new_seriousness
+    }

@@ -39,6 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const quickToggle = document.querySelector('[data-quick-toggle]');
   const quickPanel = document.querySelector('[data-quick-panel]');
   const quickItems = document.querySelectorAll('[data-quick-question]');
+  const askQuestionChip = document.querySelector('.ask-question-chip');
+  const askSwiperEl = document.querySelector('.ask-swiper');
+  const textAreas = document.querySelectorAll('.chat-input');
+  const generateDiaryBtn = document.querySelector('[data-generate-diary]');
+  const bodyEl = document.body;
+  let navIndicatorReady = false;
   const monthTitleEl = document.querySelector('[data-month-title]');
   const calendarGridEl = document.querySelector('[data-calendar-grid]');
   const diaryDetailEl = document.querySelector('[data-diary-detail]');
@@ -87,6 +93,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load diaries when switching to diary page
     if (page === 'diary') {
+      // 바로 달력 렌더링해 비어 있어도 구조가 보이도록
+      renderCalendar();
       loadDiaries();
       selectedDateKey = formatDateKey(currentMonth);
       renderDiaryDetail();
@@ -104,18 +112,81 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Body 스크롤 제어: 대화/정보 탭에서는 전역 스크롤 숨김
+    if (bodyEl) {
+      if (state.currentPage === 'chat' || state.currentPage === 'services') {
+        bodyEl.classList.add('chat-mode');
+      } else {
+        bodyEl.classList.remove('chat-mode');
+      }
+    }
   }
 
   pageTriggers.forEach((btn) => {
     btn.addEventListener('click', () => switchPage(btn.dataset.targetPage));
   });
 
+  function autoResizeTextarea(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    const maxHeight = 240;
+    const newHeight = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = `${newHeight}px`;
+    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+  }
+
+  textAreas.forEach((ta) => {
+    autoResizeTextarea(ta);
+    ta.addEventListener('input', () => autoResizeTextarea(ta));
+  });
+
+  function initAskSwiper() {
+    if (!askSwiperEl || !window.Swiper) return;
+
+    const swiper = new Swiper(askSwiperEl, {
+      spaceBetween: 30,
+      centeredSlides: true,
+      loop: true,
+      autoplay: {
+        delay: 3500,
+        disableOnInteraction: false,
+      },
+      pagination: {
+        el: '.ask-dots',
+        clickable: true,
+      },
+      navigation: {
+        nextEl: '.ask-stage .swiper-button-next',
+        prevEl: '.ask-stage .swiper-button-prev',
+      },
+      on: {
+        init: function () {
+          updateChip(this.realIndex);
+        },
+        slideChange: function () {
+          updateChip(this.realIndex);
+        }
+      }
+    });
+
+    function updateChip(idx) {
+      if (!askQuestionChip) return;
+      const slides = askSwiperEl.querySelectorAll('.ask-slide');
+      const target = slides[idx % slides.length];
+      const text = target?.dataset?.question || '라잎이에게 궁금한 것을 물어보세요';
+      askQuestionChip.textContent = text;
+    }
+
+    return swiper;
+  }
+
   function moveNavIndicator() {
     if (!navIndicator || !navElement) return;
     const activeBtn = navElement.querySelector(`.nav-item[data-target-page="${state.currentPage}"]`);
     if (!activeBtn || state.currentPage === 'home') {
       navIndicator.style.opacity = '0';
-      navIndicator.style.transform = 'translate(-999px, -50%)';
+      navIndicatorReady = false; // 홈에서는 위치 유지, 준비 플래그 해제
       return;
     }
 
@@ -129,6 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
     navIndicator.style.height = `${indicatorHeight}px`;
     navIndicator.style.transform = `translate(${centerX - indicatorWidth / 2}px, -50%)`;
     navIndicator.style.opacity = '1';
+
+    // 첫 표시 후에만 슬라이드 애니메이션 활성화
+    if (!navIndicatorReady) {
+      navIndicatorReady = true;
+      requestAnimationFrame(() => navIndicator.classList.add('ready'));
+    }
   }
 
   // Service card click handlers
@@ -269,6 +346,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   function renderMessages() {
+    const scrollToBottom = (el) => {
+      if (!el) return;
+      const last = el.lastElementChild;
+      const doScroll = (behavior = 'smooth') => {
+        el.scrollTo({ top: el.scrollHeight, behavior });
+        if (last?.scrollIntoView) last.scrollIntoView({ behavior, block: 'end' });
+      };
+      // 1) 즉시
+      doScroll('auto');
+      // 2) 렌더 뒤 한번 더
+      requestAnimationFrame(() => doScroll());
+      // 3) 느린 케이스 대비 딜레이 한번 더
+      setTimeout(() => doScroll(), 120);
+    };
+
     chatPanels.forEach((panel) => {
       const key = panel.dataset.chatPanel;
       const msgEl = panel.querySelector(`[data-chat-messages="${key}"]`);
@@ -304,7 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msgEl.appendChild(wrapper);
       });
 
-      msgEl.scrollTop = msgEl.scrollHeight;
+      scrollToBottom(msgEl);
     });
   }
 
@@ -472,6 +564,35 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Error loading diaries:', error);
     } finally {
       renderCalendar(); // 캘린더는 항상 표시
+    }
+  }
+
+  async function generateDiary() {
+    if (!generateDiaryBtn) return;
+    generateDiaryBtn.disabled = true;
+    const originalText = generateDiaryBtn.textContent;
+    generateDiaryBtn.textContent = '생성 중...';
+    try {
+      const response = await fetch('/api/diary/generate/', { method: 'POST' });
+      const data = await response.json();
+
+      if (!response.ok || data.error) {
+        const msg = data.error || data.message || '다이어리 생성 중 오류가 발생했습니다.';
+        alert(msg);
+        return;
+      }
+
+      await loadDiaries();
+      selectedDateKey = formatDateKey(new Date());
+      renderCalendar();
+      renderDiaryDetail();
+      alert('다이어리가 생성되었습니다.');
+    } catch (error) {
+      console.error('Generate diary error:', error);
+      alert('다이어리 생성 중 오류가 발생했습니다.');
+    } finally {
+      generateDiaryBtn.textContent = originalText;
+      generateDiaryBtn.disabled = false;
     }
   }
 
@@ -747,9 +868,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('resize', () => moveNavIndicator());
 
+  initAskSwiper();
   renderAuth();
   switchPage(state.currentPage);
   state.selectedServiceType = null;
+  generateDiaryBtn?.addEventListener('click', generateDiary);
 });
 
 }

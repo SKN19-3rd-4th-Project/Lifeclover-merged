@@ -38,3 +38,9 @@ coverage/
 /chatbot/sessions/
 __pycache__/
 
+.env
+*.env
+*.keras
+*.model
+/chatbot/sessions/
+__pycache__/
