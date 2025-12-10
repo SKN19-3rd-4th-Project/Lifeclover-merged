@@ -79,8 +79,15 @@ WSGI_APPLICATION = "config.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.mysql",
+        "NAME": "lcdb",     # 접속하고자 하는 DB 이름
+        "USER": "django",
+        "PASSWORD": "django",
+        "HOST": "127.0.0.1",
+        "PORT": "3306",
+        "OPTIONS": {            # 인코딩 관련
+            "charset": "utf8mb4"
+        }
     }
 }
 

@@ -18,7 +18,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from web.views import index, chat_message, get_diaries, get_diary_detail, generate_diary
+from web.views import index, chat_message, get_diaries, get_diary_detail, generate_diary, signup_api
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -29,6 +29,7 @@ urlpatterns = [
     
     # API endpoints
     path("api/chat/", chat_message, name="api_chat"),
+    path("api/signup/", signup_api, name="api_signup"),
     path("api/diaries/", get_diaries, name="api_diaries"),
     path("api/diary/<str:date>/", get_diary_detail, name="api_diary_detail"),
     path("api/diary/generate/", generate_diary, name="api_generate_diary"),

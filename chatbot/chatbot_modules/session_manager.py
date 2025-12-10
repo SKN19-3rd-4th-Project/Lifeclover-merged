@@ -3,7 +3,7 @@ import json
 import logging
 import glob
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import uuid
 
 logging.basicConfig(level=logging.INFO)
@@ -44,7 +44,7 @@ class SessionManager:
     def _get_profile_path(self, user_id: str) -> str:
         return os.path.join(self._get_user_dir(user_id), "profile.json")
 
-    def _get_history_path(self, user_id: str, date_str: str | None = None) -> str:
+    def _get_history_path(self, user_id: str, date_str: Optional[str] = None) -> str:
         if date_str is None:
             date_str = datetime.now().strftime("%Y-%m-%d")
 
