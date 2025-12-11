@@ -1,3 +1,7 @@
+import json
+from datetime import datetime
+
+from django.http import JsonResponse, HttpResponseNotAllowed
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -23,10 +27,20 @@ def get_conversation_engine():
     return conversation_engine
 
 
+
 def index(request, page: str = "home"):
     """Serve the main landing page with the requested section active."""
     safe_page = page if page in {"home", "services", "chat", "diary"} else "home"
-    return render(request, "index.html", {"current_page": safe_page})
+    response = render(request, "index.html", {"current_page": safe_page})
+    
+    # Check for user_uuid cookie
+    if "user_uuid" not in request.COOKIES:
+        engine = get_conversation_engine()
+        user_uuid = engine.session_manager.generate_user_id()
+        # Set session cookie (ephemeral, deleted on browser close)
+        response.set_cookie("user_uuid", user_uuid)
+    
+    return response
 
 
 @csrf_exempt
@@ -46,11 +60,14 @@ def chat_message(request):
         if not message:
             return JsonResponse({"error": "메시지가 비어있습니다."}, status=400)
         
-        # Use hardcoded test user ID
-        user_id = "test_user_01"
-        
         # Get conversation engine
         engine = get_conversation_engine()
+        
+        # Get user_id from cookie or generate new one
+        user_id = request.COOKIES.get("user_uuid")
+        if not user_id:
+            # Fallback: Generate via backend
+            user_id = engine.session_manager.generate_user_id()
         
         # If info mode with service type, prepend context to first message
         if mode == "info" and service_type:
@@ -66,9 +83,9 @@ def chat_message(request):
                 message = f"[사용자가 '{context}' 정보를 요청함] {message}"
         
         # Process message through conversation engine
-        response = engine.process_user_message(user_id, message, mode=mode)
+        response_text = engine.process_user_message(user_id, message, mode=mode)
         
-        return JsonResponse({"response": response})
+        return JsonResponse({"response": response_text})
     
     except json.JSONDecodeError:
         return JsonResponse({"error": "잘못된 JSON 형식입니다."}, status=400)
@@ -84,7 +101,7 @@ def get_diaries(request):
     Returns JSON: {"diaries": [{"date": "YYYY-MM-DD", "emoji": str, "tags": str, "preview": str}]}
     """
     try:
-        user_id = "test_user_01"
+        user_id = request.COOKIES.get("user_uuid", "guest")
         
         # Get conversation engine to access diary manager
         engine = get_conversation_engine()
@@ -104,7 +121,7 @@ def get_diary_detail(request, date):
     Returns JSON: {"date": str, "content": str}
     """
     try:
-        user_id = "test_user_01"
+        user_id = request.COOKIES.get("user_uuid", "guest")
         
         # Get conversation engine to access session manager
         engine = get_conversation_engine()
@@ -128,7 +145,7 @@ def generate_diary(request):
     Returns JSON: {"success": bool, "diary": str, "message": str}
     """
     try:
-        user_id = "test_user_01"
+        user_id = request.COOKIES.get("user_uuid", "guest")
         
         # Get conversation engine
         engine = get_conversation_engine()

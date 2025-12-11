@@ -1,264 +1,254 @@
-# Lifeclover UI - 프롬프트 버전 관리 가이드
+> SK네트웍스 Family AI 캠프 19기 4차 프로젝트  
+> 개발기간: 25.11.26 ~ 25.12.17 <br>
+> 주제 : LLM을 연동한 내외부 문서 기반 질의 응답 시스템
 
-> RAG+LLM 기반 감성 대화 챗봇 + 다이어리 서비스
-
----
-
-## 📋 목차
-1. [프로젝트 구조](#-프로젝트-구조)
-2. [환경 설정](#-환경-설정)
-3. [서버 실행](#-서버-실행)
-4. [프롬프트 버전 관리](#-프롬프트-버전-관리)
-5. [새 버전 추가 방법](#-새-버전-추가-방법)
-6. [개발 가이드](#-개발-가이드)
+<br>
 
 ---
 
-## 📁 프로젝트 구조
+# 📚 목차
 
-```
-Lifeclover-ui/
-├── chatbot/
-│   ├── conversation_engine.py        # LangGraph 기반 대화 엔진
-│   └── chatbot_modules/
-│       ├── empathy_agent.py          # 버전 선택 (v1/v2/v3/...)
-│       ├── info_agent.py             # 정보 제공 에이전트
-│       ├── llm_client.py             # OpenAI LLM 클라이언트
-│       ├── recommend_ba.py           # Pinecone/Tavily 도구
-│       ├── diary_manager.py          # 다이어리 관리
-│       └── chatbot_prompts/
-│           └── empathy/
-│               ├── __init__.py
-│               ├── v1.py             # 프롬프트 v1 + 로직
-│               ├── v2.py             # 프롬프트 v2 + 로직
-│               └── v3.py             # 프롬프트 v3 + 로직
-├── config/
-│   └── settings.py                   # Django 설정 (환경변수 로드)
-├── web/
-│   └── views.py                      # API 엔드포인트
-├── templates/
-│   └── index.html                    # 프론트엔드
-├── static/
-│   ├── css/
-│   └── js/
-├── requirements.txt                  # Python 패키지 의존성
-└── manage.py                         # Django 관리 스크립트
-```
+1. [팀 소개](#%EF%B8%8F-%ED%8C%80-%EC%86%8C%EA%B0%9C)
+2. [프로젝트 개요](#-%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B8-%EA%B0%9C%EC%9A%94)
+3. [기술 스택 & 사용한 모델](#-%EA%B8%B0%EC%88%A0-%EC%8A%A4%ED%83%9D--%EC%82%AC%EC%9A%A9%ED%95%9C-%EB%AA%A8%EB%8D%B8)
+4. [시스템 아키텍처](#%EC%8B%9C%EC%8A%A4%ED%85%9C-%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98)
+5. [WBS](#-wbs)
+6. [요구사항 명세서](#%EF%B8%8F%E2%83%A3-%EC%9A%94%EA%B5%AC%EC%82%AC%ED%95%AD-%EB%AA%85%EC%84%B8%EC%84%9C)
+7. [화면 설계서](#️-화면-설계서)
+8. [테스트 계획 및 결과 보고서](#-%ED%85%8C%EC%8A%A4%ED%8A%B8-%EA%B3%84%ED%9A%8D-%EB%B0%8F-%EA%B2%B0%EA%B3%BC-%EB%B3%B4%EA%B3%A0%EC%84%9C)
+9. [3차에서의 개선 사항](#-3차에서의-개선-사항)
+10. [트러블 슈팅](#-%ED%8A%B8%EB%9F%AC%EB%B8%94%EC%8A%88%ED%8C%85)
+11. [수행결과(시연 페이지)](#-%EC%88%98%ED%96%89%EA%B2%B0%EA%B3%BC%EC%8B%9C%EC%97%B0-%ED%8E%98%EC%9D%B4%EC%A7%80)
+12. [한 줄 회고](#%EF%B8%8F-%ED%95%9C-%EC%A4%84-%ED%9A%8C%EA%B3%A0)
+
+<br>
 
 ---
 
-## ⚙️ 환경 설정
+# 🖐️ 팀 소개
 
-### 1. 저장소 클론
-```bash
-git clone https://github.com/SKN-19-3rd-4th-Project/Lifeclover-ui.git
-cd Lifeclover-ui
-```
+- ## 팀명 : **맺음**
+- ### 팀원 소개 :
 
-### 2. 브랜치 체크아웃
-```bash
-git checkout feat/django-ui-ksu
-```
+<div align="center">
+	
+| [@배상준](https://github.com/WindyAle) | [@박소희](https://github.com/xxoysauce) | [@이승원](https://github.com/seungwon-sw) | [@김성욱](https://github.com/souluk319) | [@박진형](https://github.com/vispi94) |
+| :----------------------------------------: | :----------------------------------------: | :----------------------------------------: | :----------------------------------------: | :----------------------------------------: |
+| <img src="data/image/BSJ.png" width="120"> | <img src="data/image/PSH.png" width="120"> | <img src="data/image/LSW.png" width="120"> | <img src="data/image/KSU.png" width="120"> | <img src="data/image/PJH.png" width="120"> |
 
-### 3. Conda 가상환경 생성 및 활성화
-```bash
-conda create -n ml_env python=3.12
-conda activate ml_env
-```
+</div>
 
-### 4. 패키지 설치
-```bash
-pip install -r requirements.txt
-```
-
-### 5. 환경 변수 설정
-프로젝트 **상위 폴더**에 `.env` 파일 생성:
-
-**위치**: `F:\SKN-19\.env` (또는 적절한 상위 경로)
-
-```env
-OPENAI_API_KEY=sk-proj-...
-PINECONE_API_KEY=pcsk_...
-TAVILY_API_KEY=tvly-...
-```
-
-> ⚠️ `.env` 파일은 절대 Git에 커밋하지 마세요!
-
-### 6. 마이그레이션 (선택)
-```bash
-python manage.py migrate
-```
+<br>
 
 ---
 
-## 🚀 서버 실행
+# 📖 프로젝트 개요
 
-```bash
-python manage.py runserver
-```
+##  주제 : 남은 인생을 후회 없이 잘 살고, 품위 있는 끝맺음을 준비하며, <br> 새로운 삶의 의미를 찾아가는 과정을 돕는 AI 기반의 '대화 상대' 챗봇 서비스
 
-**접속**: http://127.0.0.1:8000/
+- ###  **프로젝트 소개**
 
----
+"**라잎클로버**"는 사용자가 남은 삶을 정돈하고 의미를 찾을 수 있도록 돕는 AI 대화형 챗봇 서비스입니다.  
+**상속, 장례 절차, 인터넷 계정 관리, 정서 상담 등 다양한 주제를 RAG 기반으로 안내**하며  
+**사용자의 감정·기억까지 반영된 맞춤형 대화를 제공**합니다.
 
-## 🎯 프롬프트 버전 관리
+- ###  **프로젝트 배경**
 
-### 현재 버전 목록
+"삶의 마무리 과정(상속·장례·연명의료 등)에 대한 정보 수요가 증가하고 있지만,<br>
+궁금한 정보를 다양하게 제공하거나 정서적 부담으로 주변에 쉽게 이야기하기 어려운 고민을<br>
+한 곳에서 상담/안내해주는 통합 서비스는 부족합니다."
 
-| 버전 | 특징 | 스케일 | Deep Mode | 주요 기능 |
-|------|------|--------|-----------|-----------|
-| **v1** | 원본 (한국어) | 0~1 | ≥ 0.6 | 기본 감성 대화 |
-| **v2** | 유머 감지 개선 | 0~10 | ≥ 6 | Light Mode, 이모지 규칙 |
-| **v3** | 웰라이프 코치 | 0~10 | ≥ 6 | 생활 제안, 루틴 개선 |
+- **현대 사회 이슈**
+   -   고령화 사회 심화
+   -   독거노인 + 1인 가구 증가
+   -   무연고자 사망 증가
 
-### 버전 전환 방법
+<details>
+<summary>관련 기사</summary>
 
-`chatbot/chatbot_modules/empathy_agent.py` 파일 수정:
+### ■ 무연고 사망 증가
 
-```python
-PROMPT_VERSION = "v2"  # "v1", "v2", "v3" 중 선택
-```
+<img src="data/image/news1.png">
 
-→ **서버 재시작 필수!**
+- 무연고 사망자는 년마다 증가하는 추세이며, 통계에 잡히지 않는 불특정 다수도 있어 관심과 대책이 요망됨.
 
----
+[https://repository.kli.re.kr/bitstream/2021.oak/6926/2/%EB%85%B8%EB%8F%99%EB%A6%AC%EB%B7%B0_no.208_2022.7_7.pdf](https://repository.kli.re.kr/bitstream/2021.oak/6926/2/%EB%85%B8%EB%8F%99%EB%A6%AC%EB%B7%B0_no.208_2022.7_7.pdf)
+##### 출처: 보건복지부
 
-## ➕ 새 버전 추가 방법
 
-### Step 1: 기존 버전 복사
-```bash
-cd chatbot/chatbot_modules/chatbot_prompts/empathy
-cp v2.py v4.py
-```
+### ■ 고령화 + 1인 가구
 
-### Step 2: v4.py 파일 수정
-```python
-# empathy/v4.py
+<img src="data/image/news2.png">
 
-# 프롬프트 수정
-SYSTEM_PROMPT_TEMPLATE = """
-You are "Lify", a warm emotional companion...
+-   한국은 2025년 초고령사회 진입.
+    
+-   노년층 1인 가구 폭증 → 죽음 준비·장례 절차의 정보 접근성 낮음.    
+[https://kostat.go.kr/portal/korea/kor_nw/1/1/index.board?bmode=read&aSeq=429567?utm_source=chatgpt.com](https://kostat.go.kr/portal/korea/kor_nw/1/1/index.board?bmode=read&aSeq=429567?utm_source=chatgpt.com)
+##### 출처: 통계청
 
-[여기에 새로운 규칙 작성]
-"""
+## 해외 죽음 준비 문화 동향
+	
+### ■ 일본의 ‘슈카츠(終活, Shukatsu)’ 확산
 
-# 로직 설정 (필요시)
-ALPHA = 0.7
-DEEP_MODE_THRESHOLD = 6
-WISDOM_INSTRUCTION_LANG = "ko"
-# ...
-```
+-   일본에서는 **자기 죽음을 준비하는 활동 전체**를 가리키는 말로 ‘슈카츠(終活)’가 이미 널리 사용됨. [위키백과](https://en.wikipedia.org/wiki/Shukatsu_%28end-of-life_planning%29?utm_source=chatgpt.com)
 
-### Step 3: empathy_agent.py에 버전 추가
-```python
-# chatbot/chatbot_modules/empathy_agent.py
+-   주체적인 삶의 마무리, 남겨진 가족의 부담 경감, 현재 삶의 재발견과 성찰, 물리적 정리를 대비하는 문화<br>
+   Shukatsu 개념 정리(위키피디아) <br>
+   [](https://en.wikipedia.org/wiki/Shukatsu_(end-of-life_planning))[https://en.wikipedia.org/wiki/Shukatsu_(end-of-life_planning)](https://en.wikipedia.org/wiki/Shukatsu_(end-of-life_planning))
 
-PROMPT_VERSION = "v4"  # 새 버전 선택
+### ■ 미국 – Legacy AI / Digital Afterlife 시장 등장
 
-# ...
+- “StoryWorth”: AI 기반 인생 회고 스토리북 생성 서비스 → 미국에서 급성장.
+    
+    출처: StoryWorth 공식
+    
+    https://welcome.storyworth.com/?utm_source=chatgpt.com
+    
+- “HereAfter AI”: AI가 사용자의 생전 음성·이야기를 기록 → 유족이 대화 가능.
+    
+    출처: HereAfter
+    
+    https://www.hereafter.ai/?utm_source=chatgpt.com
 
-elif PROMPT_VERSION == "v4":
-    from chatbot_modules.chatbot_prompts.empathy.v4 import empathy_node
-```
+<br>
 
-### Step 4: 테스트
-```bash
-python manage.py runserver
-# 브라우저에서 테스트
-```
+#### => 해외에는 `웰다잉 Well Dying (남은 삶을 어떻게 잘 살아내고 마무리할 것인지)` 문화가 성행하나 국내에선 낯설고 관심 부족한 상태
+	
+### "이러한 배경에서 저희는 **신뢰할 수 있는 안내/대화 서비스의 필요성**을 느끼고 도움을 줄 수 있는 챗봇을 구상하게 되었습니다."
 
-### Step 5: 커밋 & 푸시
-```bash
-git add .
-git commit -m "feat: 프롬프트 v4 추가 - [설명]"
-git push origin feat/django-ui-ksu
-```
+</details>
 
----
+- ### **프로젝트 목표**
 
-## 💡 개발 가이드
+1.  **핵심 정보 제공**: 상속·장례·인터넷 개인정보 처리 등 삶의 마무리에 필요한 정보를 정확하게 안내
+    
+2.  **맞춤형 대화**: 감정·기억을 반영한 개인화된 상담 제공
+    
+3.  **RAG 기반 정확성 향상**: GPT-4o + Pinecone으로 근거 기반 답변 생성
+    
+4.  **사용자 중심 UI 구현**: (여기에 구현 프로그램 명 입력) 을 사용한 모바일 최적화 인터페이스로 간편한 이용 환경 제공
 
-### 프롬프트 작성 팁
-
-1. **Light Mode (0~2점)**: 유머, 가벼운 대화
-   - 과도한 공감 X
-   - 품위 있는 반응: "재치 있으시네요", "센스 있는 표현이에요"
-
-2. **Normal Mode (3~5점)**: 일상 고민
-   - 공감 + 실용적 조언
-
-3. **Deep Mode (6~10점)**: 깊은 고민, 실존적 질문
-   - `recommend_welldying_wisdom` 도구 사용
-   - 깊이 있는 위로
-
-### 이모지 사용 규칙 (v2, v3)
-- **기본**: 이모지 사용 금지
-- **허용**: Light Mode + 유저가 웃음 사용 시 (ㅋㅋ, ㅎㅎ, 😂)
-  - 최대 1개 (🙂 또는 😊)
-- **금지**: Deep Mode에서는 절대 사용 금지
-
-### 설정 파라미터
-
-| 파라미터 | 설명 | 기본값 |
-|---------|------|--------|
-| `ALPHA` | 점수 업데이트 가중치 (0~1) | 0.7 |
-| `NORMALIZE_INPUT` | 입력 점수 정규화 (0~1) | False |
-| `DEEP_MODE_THRESHOLD` | Deep Mode 기준점 | 6 (0~10 스케일) |
-| `ANALYZER_INPUT_FORMAT` | 분석기 입력 형식 | `"User message: {message}"` |
-| `WISDOM_INSTRUCTION_LANG` | 위로 지혜 언어 | `"ko"` 또는 `"en"` |
+<br>
 
 ---
 
-## 🐛 트러블슈팅
+# 💻 기술 스택 & 사용한 모델  
 
-### 1. `ModuleNotFoundError: No module named 'langchain'`
-```bash
-pip install -r requirements.txt
-```
+| 분야                | 사용 도구 |
+|---------------------|-----------|
+| **Language**        | [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=Python&logoColor=white)](https://www.python.org/) |
+| **Collaboration Tool** | [![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)](https://git-scm.com/) [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/) [![Notion](https://img.shields.io/badge/Notion-000000?style=for-the-badge&logo=notion&logoColor=white)](https://www.notion.so/) [![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/) |
+| **LLM Model**       | [![GPT-4o](https://img.shields.io/badge/GPT--4o%20-412991?style=for-the-badge&logo=openai&logoColor=white)](https://platform.openai.com/) 
+| **Embedding Model** | [![text-embedding-3-small](https://img.shields.io/badge/text--embedding--3--small-00A67D?style=for-the-badge&logo=openai&logoColor=white)](https://platform.openai.com/docs/guides/embeddings) |
+| **Vector DB**       | [![Pinecone](https://img.shields.io/badge/Pinecone-0075A8?style=for-the-badge&logo=pinecone&logoColor=white)](https://www.pinecone.io/) |
+| **Orchestration / RAG** | [![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://www.langchain.com/) [![LangGraph](https://img.shields.io/badge/LangGraph-000000?style=for-the-badge)](https://langchain-ai.github.io/langgraph/) |
+| **Frontend** | ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=React&logoColor=black) |
+| **Development Env** | [![VS Code](https://img.shields.io/badge/VS%20Code-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://code.visualstudio.com/) [![Conda](https://img.shields.io/badge/Conda-3EB049?style=for-the-badge&logo=anaconda&logoColor=white)](https://www.anaconda.com/)
 
-### 2. `PINECONE_API_KEY` 오류
-- `.env` 파일 위치 확인 (프로젝트 상위 폴더)
-- `config/settings.py`의 `env_path` 확인
-
-### 3. `Invalid HTTP_HOST header`
-- `config/settings.py`: `ALLOWED_HOSTS = ['*']` 확인
-
-### 4. 프롬프트 변경이 반영 안 됨
-- 서버 재시작 필수!
-- `empathy_agent.py`의 `PROMPT_VERSION` 확인
+<br>
 
 ---
 
-## 📚 참고 문서
+# 🪢시스템 아키텍처
 
-- **프로젝트 분석**: `PROJECT_ANALYSIS.md`
-- **TODO 리스트**: `TODO_LIST.md`
-- **작업 로그**: `WORK_LOG_2025-12-05.md`
+### 프로젝트 구조
+
+<br>
+
+### 시스템 아키텍처 구조도
+
+<br>
 
 ---
 
-## 👥 팀원 협업 가이드
+# 📅 WBS
 
-### 브랜치 전략
-- `main`: 안정화 버전
-- `feat/django-ui-bsj`: 기준 브랜치
-- `feat/django-ui-ksu`: 개발 브랜치
-- `feat/django-ui-[이름]`: 각자 브랜치
+<br>
 
-### Pull Request 전
-1. 최신 코드 pull
-2. 충돌 해결
-3. 테스트 완료 확인
-4. 커밋 메시지 명확히
+---
 
-### 커밋 메시지 규칙
-```
-feat: 새 기능 추가
-fix: 버그 수정
-docs: 문서 수정
-refactor: 코드 리팩토링
-test: 테스트 추가
-```
+# *️⃣ 요구사항 명세서
 
-**Last Updated**: 2025.12.05 
+**시작 페이지 관리 (SP)**
 
+<img src="data/image/sp.png"><br>
+
+**안내 페이지 관리 (INFO)**
+
+<img src="data/image/info.png"><br>
+
+**채팅 페이지 관리 (CHAT)**
+
+<img src="data/image/chat.png"><br>
+
+**회원 관리 (MBM)**
+
+<img src="data/image/mbm.png"><br>
+
+**세션 관리 (SES)**
+
+<img src="data/image/ses.png"><br>
+
+**비기능 요구 사항 (NFR)**
+
+<img src="data/image/nfr.png"><br>
+
+<br>
+
+---
+
+# 🖥️ 화면 설계서
+
+<img src="data/image/start_page.png"><br>
+
+<img src="data/image/info_page.png"><br>
+
+<img src="data/image/login_page.png"><br>
+
+<img src="data/image/signup_page1.png"><br>
+
+<img src="data/image/signup_page2.png"><br>
+
+<img src="data/image/infochat_page.png"><br>
+
+<img src="data/image/chat_page.png"><br>
+
+<img src="data/image/diary_page.png"><br>
+
+<br>
+
+---
+
+# 💡 테스트 계획 및 결과 보고서
+
+<br>
+
+---
+
+# 🪜 3차에서의 개선 사항
+
+<br>
+
+---
+
+# 🐛 트러블슈팅
+
+<br>
+
+---
+
+# 🤖 수행결과(시연 페이지)
+
+<br>
+
+---
+
+# ✒️ 한 줄 회고
+
+| 이름 | 회고 |
+|----------|-------------|
+| 배상준 |  |
+| 박소희 |  |
+| 이승원 |  |
+| 김성욱 |  |
+| 박진형 |  |
