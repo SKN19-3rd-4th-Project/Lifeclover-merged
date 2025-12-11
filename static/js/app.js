@@ -8,6 +8,10 @@ if (window.__LIFECLOVER_APP_INIT__) {
       currentPage: 'home',
       isLoggedIn: false,
       userName: '회원',
+      userProfile: null, // User profile data from login
+      preferredName: null, // User's preferred name
+      mobilityStatus: null, // User's mobility status
+      emotionStatus: null, // User's emotional state
       messagesChat: [],
       messagesInfo: [],
       currentMode: 'chat', // 'chat' or 'info'
@@ -256,6 +260,12 @@ if (window.__LIFECLOVER_APP_INIT__) {
         logoutBtn.textContent = '로그아웃';
         logoutBtn.addEventListener('click', () => {
           state.isLoggedIn = false;
+          state.userName = '회원';
+          state.userProfile = null;
+          state.preferredName = null;
+          state.mobilityStatus = null;
+          state.emotionStatus = null;
+          state.messagesChat = [];
           renderAuth();
         });
         authContainer.appendChild(deleteBtn);
@@ -306,18 +316,56 @@ if (window.__LIFECLOVER_APP_INIT__) {
       if (e.target === loginModal) closeLoginModal();
     });
 
-    loginForm?.addEventListener('submit', (e) => {
+    loginForm?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(loginForm);
       const username = (formData.get('username') || '').toString().trim();
       const password = (formData.get('password') || '').toString().trim();
-      if (!username || !password) return;
 
-      // Demo 로그인 처리: 입력만 확인하고 로그인 상태 전환
-      state.isLoggedIn = true;
-      state.userName = username || '회원';
-      renderAuth();
-      closeLoginModal();
+      if (!username || !password) {
+        alert('아이디와 비밀번호를 입력해주세요.');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/login/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username: username,
+            password: password
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          // 로그인 성공: 상태 업데이트
+          state.isLoggedIn = true;
+          state.userName = username;
+          state.userProfile = data.profile || {};
+          state.preferredName = data.profile?.preferred_name || username;
+          state.mobilityStatus = data.profile?.mobility_display || '';
+          state.emotionStatus = data.profile?.emotion_display || '';
+
+          renderAuth();
+          closeLoginModal();
+
+          // 채팅 메시지 초기화 (로그인 후 환영 메시지)
+          state.messagesChat = [];
+          if (state.currentPage === 'chat') {
+            initializeChat();
+          }
+        } else {
+          // 로그인 실패: 경고 메시지 표시
+          alert(data.message || '로그인에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        alert('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }
     });
 
     function openDeleteModal() {
@@ -338,11 +386,33 @@ if (window.__LIFECLOVER_APP_INIT__) {
     deleteModal?.addEventListener('click', (e) => {
       if (e.target === deleteModal) closeDeleteModal();
     });
-    deleteConfirmBtn?.addEventListener('click', () => {
-      // Demo: 탈퇴 후 로그아웃 처리
-      state.isLoggedIn = false;
-      renderAuth();
-      closeDeleteModal();
+    deleteConfirmBtn?.addEventListener('click', async () => {
+      try {
+        // 백엔드 API로 회원탈퇴 요청
+        const response = await fetch('/api/withdraw/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert(data.message || '회원탈퇴가 완료되었습니다.');
+          // 탈퇴 성공 후 로그아웃 처리
+          state.isLoggedIn = false;
+          state.userName = '회원';
+          renderAuth();
+          closeDeleteModal();
+          switchPage('home');
+        } else {
+          alert(data.message || '회원탈퇴에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('Withdraw error:', error);
+        alert('회원탈퇴 중 오류가 발생했습니다. 다시 시도해주세요.');
+      }
     });
 
     function renderMessages() {
@@ -403,8 +473,26 @@ if (window.__LIFECLOVER_APP_INIT__) {
     function initializeChat() {
       // Add welcome message for empathy mode
       if (state.currentMode === 'chat' && state.messagesChat.length === 0) {
+        let welcomeMessage = '안녕하세요! 오늘은 좀 어떠신가요? 편하게 말씀해주세요.';
+
+        // 로그인된 사용자의 경우 개인화된 환영 메시지
+        if (state.isLoggedIn && state.preferredName) {
+          const name = state.preferredName;
+          welcomeMessage = `안녕하세요, ${name}님! 오늘은 좀 어떠신가요?`;
+
+          // 거동 상태나 감정 상태가 있으면 추가 멘트
+          if (state.mobilityStatus || state.emotionStatus) {
+            const statusParts = [];
+            if (state.mobilityStatus) statusParts.push(state.mobilityStatus);
+            if (state.emotionStatus) statusParts.push(state.emotionStatus);
+            welcomeMessage += ` (${statusParts.join(', ')})`;
+          }
+
+          welcomeMessage += ' 편하게 말씀해주세요.';
+        }
+
         state.messagesChat = [
-          { role: 'bot', content: '안녕하세요! 오늘은 좀 어떠신가요? 편하게 말씀해주세요.' }
+          { role: 'bot', content: welcomeMessage }
         ];
         renderMessages();
       }

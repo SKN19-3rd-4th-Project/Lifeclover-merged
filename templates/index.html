@@ -4,7 +4,7 @@
 {% block title %}Lifeclover - 당신의 클로버가 되어 드릴게요{% endblock %}
 
 {% block extra_head %}
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
 {% endblock %}
 
 {% block content %}
@@ -57,7 +57,7 @@
         <article class="about-card">
           <div class="about-icon">📖</div>
           <h3 class="about-title">알려줘요</h3>
-          <p class="about-desc">장례 시설 및 조례, 디지털 개인 정보 처리,<br> 
+          <p class="about-desc">장례 시설 및 조례, 디지털 개인 정보 처리,<br>
             유산처리 정보를 안내합니다.</p>
         </article>
         <article class="about-card">
@@ -152,7 +152,8 @@
               <div class="quick-wrap">
                 <button type="button" class="quick-toggle" data-quick-toggle>무엇이 궁금하세요?</button>
                 <div class="quick-panel" data-quick-panel>
-                  <button type="button" class="quick-item" data-quick-question="funeral_facilities">장례 시설 예시 질문 보기</button>
+                  <button type="button" class="quick-item" data-quick-question="funeral_facilities">장례 시설 예시 질문
+                    보기</button>
                   <button type="button" class="quick-item" data-quick-question="support_policy">지원 정책 예시 질문 보기</button>
                   <button type="button" class="quick-item" data-quick-question="inheritance">유산 상속 예시 질문 보기</button>
                   <button type="button" class="quick-item" data-quick-question="digital_info">디지털 정보 예시 질문 보기</button>
@@ -160,11 +161,8 @@
               </div>
             </div>
             <div class="chat-input-body">
-              <textarea
-                class="chat-input"
-                placeholder="무엇이 궁금하세요?... (Enter로 전송)"
-                data-chat-input="services"
-              ></textarea>
+              <textarea class="chat-input" placeholder="무엇이 궁금하세요?... (Enter로 전송)"
+                data-chat-input="services"></textarea>
             </div>
             <div class="chat-actions">
               <button type="button" class="send-button modern" data-send-message="services">전송</button>
@@ -216,11 +214,7 @@
         <div class="chat-input-container">
           <div class="chat-input-top"></div>
           <div class="chat-input-body">
-            <textarea
-              class="chat-input"
-              placeholder="무엇이든 물어보세요... (Enter로 전송)"
-              data-chat-input="chat"
-            ></textarea>
+            <textarea class="chat-input" placeholder="무엇이든 물어보세요... (Enter로 전송)" data-chat-input="chat"></textarea>
           </div>
           <div class="chat-actions">
             <button type="button" class="send-button modern" data-send-message="chat">전송</button>
@@ -261,11 +255,11 @@
       <form class="modal-form" data-login-form>
         <div class="modal-field">
           <label class="sr-only" for="login-username">아이디</label>
-          <input id="login-username" name="username" type="text" placeholder="ID를 입력하세요." required>
+          <input id="login-username" name="username" type="text" placeholder="아이디를 입력하세요." required>
         </div>
         <div class="modal-field">
           <label class="sr-only" for="login-password">비밀번호</label>
-          <input id="login-password" name="password" type="password" placeholder="PWD를 입력하세요." required>
+          <input id="login-password" name="password" type="password" placeholder="비밀번호를 입력하세요." required>
         </div>
         <div class="modal-actions">
           <button type="submit" class="modal-btn primary">로그인</button>
@@ -290,6 +284,6 @@
 </main>
 
 {% block extra_scripts %}
-  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script>
 {% endblock %}
 {% endblock %}

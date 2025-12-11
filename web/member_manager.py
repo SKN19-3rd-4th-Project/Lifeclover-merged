@@ -111,23 +111,70 @@ class MemberManager:
         [로그인]
         1. Django 인증
         2. 챗봇 세션 파일 존재 확인 및 로드 준비
+        3. 사용자 프로필 정보 반환
         """
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
             login(request, user)
             
-            # 챗봇 세션 파일 확인 (없으면 복구 또는 생성)
-            # 로그인한 사용자 ID(username)를 키로 사용하여 세션을 로드합니다.
+            # 사용자 프로필 가져오기
+            profile_data = {}
+            try:
+                if UserProfile and hasattr(user, 'profile'):
+                    profile = user.profile
+                    profile_data = {
+                        'username': user.username,
+                        'preferred_name': profile.preferred_name or user.username,
+                        'mobility_status': profile.mobility_status or '',
+                        'current_emotion': profile.current_emotion or '',
+                        'mobility_display': profile.get_mobility_status_display() if profile.mobility_status else '',
+                        'emotion_display': profile.get_current_emotion_display() if profile.current_emotion else ''
+                    }
+                else:
+                    profile_data = {
+                        'username': user.username,
+                        'preferred_name': user.username,
+                        'mobility_status': '',
+                        'current_emotion': '',
+                        'mobility_display': '',
+                        'emotion_display': ''
+                    }
+            except Exception as e:
+                logger.warning(f"프로필 로드 실패: {e}")
+                profile_data = {
+                    'username': user.username,
+                    'preferred_name': user.username,
+                    'mobility_status': '',
+                    'current_emotion': '',
+                    'mobility_display': '',
+                    'emotion_display': ''
+                }
+            
+            # 챗봇 세션 파일 확인 및 프로필 동기화
             session_data = self.session_manager.load_session(user.username)
             
-            # 마지막 접속 시간 업데이트 (선택 사항)
+            # DB 프로필을 세션에 동기화
+            if 'user_profile' not in session_data:
+                session_data['user_profile'] = {}
+            
+            session_data['user_profile'].update({
+                'name': profile_data['preferred_name'],
+                'username': user.username,
+                'mobility': profile_data['mobility_display'],
+                'emotion': profile_data['emotion_display']
+            })
+            
+            # 세션 저장
+            self.session_manager.save_profile(user.username, session_data)
+            
+            # 마지막 접속 시간 업데이트
             self.session_manager.update_last_visit(user.username)
             
             logger.info(f"로그인 성공: {username}")
-            return True, "로그인되었습니다."
+            return True, "로그인되었습니다.", profile_data
         else:
-            return False, "아이디 또는 비밀번호가 올바르지 않습니다."
+            return False, "아이디 또는 비밀번호가 올바르지 않습니다.", None
 
     def logout_member(self, request):
         """
@@ -159,15 +206,12 @@ class MemberManager:
                 # Django의 User를 삭제하면 연결된 UserProfile도 같이 삭제됨 (on_delete=models.CASCADE 설정 시)
                 user.delete()
                 
-                # 2. 세션 파일 삭제
-                # SessionManager에 delete 기능이 없다면 os.remove로 직접 처리하거나 추가 구현 필요
-                # 앞서 구현한 delete_diary_entry와 유사하게 세션 파일 삭제 로직 수행
-                session_path = self.session_manager._get_file_path(username)
-                if os.path.exists(session_path):
-                    os.remove(session_path)
-                
-                # 다이어리 파일들도 삭제 (선택 사항)
-                # glob을 이용해 해당 유저의 다이어리 전체 삭제 가능
+                # 2. 세션 디렉토리 전체 삭제 (프로필, 히스토리, 다이어리 모두 포함)
+                user_dir = self.session_manager._get_user_dir(username)
+                if os.path.exists(user_dir):
+                    import shutil
+                    shutil.rmtree(user_dir)
+                    logger.info(f"세션 디렉토리 삭제: {user_dir}")
                 
                 logger.info(f"회원탈퇴 완료: {username}")
                 return True, "회원탈퇴가 완료되었습니다."
