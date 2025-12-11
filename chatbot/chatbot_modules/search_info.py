@@ -1,149 +1,239 @@
 import os
+import json
 import logging
+# import random
+from typing import List
 
+# Pinecone & LangChain
 from pinecone import Pinecone
-from langchain_pinecone import PineconeVectorStore
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.tools import tool
+from langchain_pinecone import PineconeVectorStore
 
+# 지역 유사도 위한 함수.
+from difflib import get_close_matches
+
+# 연결 상태 로깅
+# logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# -----------------------------------------------------------------------------
-# Pinecone / Embeddings 초기화
-# -----------------------------------------------------------------------------
+# 데이터 파일 경로/ 혹시 몰라 남겨둠.
+current_dir = os.path.dirname(os.path.abspath(__file__))
+ordinance_file_path = os.path.join(current_dir, '../data/ordinance_region_list.json')
+facilities_file_path = os.path.join(current_dir, '../data/facilities_region_list.json')
+
+# 설정
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-INDEX_NAME = "info-assets"           # 실제 인덱스 이름과 다르면 여기를 수정해야 합니다.
+INDEX_NAME = "funeral-services"
 EMBEDDING_MODEL = "text-embedding-3-small"
 
-pc = None
-index = None
-embeddings = None
-vectorstore = None
-
+# 전역 객체 초기화
 try:
-    if not PINECONE_API_KEY:
-        raise ValueError(
-            "You haven't specified an API key. Please set PINECONE_API_KEY."
-        )
-
     pc = Pinecone(api_key=PINECONE_API_KEY)
     index = pc.Index(INDEX_NAME)
     embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
-
-    # langchain_pinecone VectorStore
-    vectorstore = PineconeVectorStore(
-        index=index,
-        embedding=embeddings,
-    )
 except Exception as e:
-    # API 키가 없거나 인덱스가 없으면 여기로 빠짐
     logger.warning(f"Pinecone 초기화 실패: {e}")
-    vectorstore = None
+    index = None
+
+vectorstore_ordinance = PineconeVectorStore(
+    index=index, 
+    embedding=embeddings,
+    namespace="ordinance"
+)
+vectorstore_funeral_facilities = PineconeVectorStore(
+    index=index, 
+    embedding=embeddings,
+    namespace='funeral_facilities'
+)
+vectorstore_digital_legacy = PineconeVectorStore(
+    index=index, 
+    embedding=embeddings,
+    namespace='digital_legacy'
+)
+vectorstore_legacy = PineconeVectorStore(
+    index=index, 
+    embedding=embeddings,
+    namespace='legacy'
+)
+
+with open(ordinance_file_path, 'r', encoding='utf-8') as f:
+    region_list_json = json.load(f)
+    # print(region_list_json)
+    
+with open(facilities_file_path, 'r', encoding='utf-8') as f:
+    facilities_region_list_json = json.load(f)
+    # print(facilities_region_list_json)
 
 
-# -----------------------------------------------------------------------------
-# 공통 유틸
-# -----------------------------------------------------------------------------
-def _safe_search(query: str, k: int = 5, filter: dict | None = None) -> str:
-    """
-    내부에서 공통으로 사용하는 안전한 검색 래퍼.
-
-    - vectorstore 가 None 이면 'DB 연결 오류' 메시지 반환
-    - 검색 결과가 없으면 '검색 결과가 없습니다.' 반환
-    """
-    if not vectorstore:
-        return "DB 연결 오류"
-
-    docs = vectorstore.similarity_search(query=query, k=k, filter=filter)
-
-    if not docs:
-        return "검색 결과가 없습니다."
-
-    lines: list[str] = []
-    for i, d in enumerate(docs, start=1):
-        # page_content 기준으로 간단히 정리
-        lines.append(f"[{i}] {d.page_content}")
-    return "\n\n".join(lines)
-
-
-# -----------------------------------------------------------------------------
-# Tool 정의
-# -----------------------------------------------------------------------------
-@tool
-def search_funeral_facilities(region: str, facility_type: str = "all") -> str:
-    """
-    [장례 시설 검색] 장례식장, 봉안당, 화장장, 묘지, 자연장지 등을 검색합니다.
-
-    - region: 시/군/구 또는 광역 단위 지역명 (예: '군포시', '서울', '수도권')
-    - facility_type: '장례식장', '봉안당', '화장장', '묘지', '자연장지' 등
-      - 특별히 구분하지 않을 경우 기본값 'all' 사용
-    """
-    # 쿼리 문장 생성
-    if facility_type == "all":
-        query = f"{region} 지역의 장례 관련 시설(장례식장, 봉안당, 화장장, 묘지, 자연장지)"
-        filter_query = {"category": "funeral"}
-    else:
-        query = f"{region} 지역의 {facility_type} 정보를 알려줘"
-        filter_query = {"category": "funeral", "facility_type": facility_type}
-
-    return _safe_search(query=query, k=5, filter=filter_query)
-
-
-@tool
-def search_public_funeral_ordinance(region: str) -> str:
-    """
-    [공영 장례 조례 검색] 지자체의 공영 장례 지원/조례 정보를 검색합니다.
-
-    - region: '서울특별시', '경기도 군포시' 처럼 하나의 지자체 이름
-    """
-    query = f"{region} 지역의 공영 장례 지원 조례 및 제도"
-    filter_query = {"category": "public_funeral"}
-    return _safe_search(query=query, k=5, filter=filter_query)
-
+# 유사한 지역 반환 함수
+def find_matching_regions(user_input, region_list, n=3):
+    """유사한 지역 여러 개 반환"""
+    matched = []
+    
+    # 1. 양방향 체크
+    for region in region_list:
+        if user_input in region or region in user_input:
+            matched.append(region)
+            if len(matched) >= n:
+                return matched
+    
+    # 2. 유사도 기반 매칭
+    if not matched:
+        matched = get_close_matches(user_input, region_list, n=n, cutoff=0.6)
+    
+    return matched if matched else None
 
 @tool
-def search_cremation_subsidy_ordinance(region: str) -> str:
+def search_public_funeral_ordinance(query: str, region: str = None):
     """
-    [화장 장려금/지원 검색] 지자체의 화장 장려금 관련 조례/지원 정보를 검색합니다.
-
-    - region: '서울특별시', '경기도 군포시' 등
+    공영장례 조례를 검색합니다.
+    
+    Args:
+        query: 검색어 (예: "지원 대상")
+        region: 지역명 (예: "수원시", "서울특별시 강남구, 인천광역시 서구")
     """
-    query = f"{region} 지역의 화장 장려금 및 화장 지원 조례"
-    filter_query = {"category": "cremation_subsidy"}
-    return _safe_search(query=query, k=5, filter=filter_query)
+    # filter_dict 먼저 초기화
+    filter_dict = {"type": "Public_Funeral_Ordinance"}
+    k = 3
+    
+    if region:
+        region_list = region_list_json["public_funeral_ordinance"]
+        matched = find_matching_regions(region, region_list, n=k)  # 여러 개
+        # print(f"공영 장례 조례 매칭된 지역들 최대 {k}개",matched)
+        if matched:
+            if len(matched) == 1:
+                filter_dict["region"] = matched[0]  # 1개면 직접
+            else:
+                filter_dict["region"] = {"$in": matched}  # 여러 개면 in
 
+    results = vectorstore_ordinance.similarity_search(query, k=k, filter=filter_dict)
+    return results
 
 @tool
-def search_digital_legacy(platform: str) -> str:
+def search_cremation_subsidy_ordinance(query: str, region: str = None):
     """
-    [디지털 유산 검색] 특정 플랫폼(카카오, 네이버, 구글 등)의 계정 사전·사후 처리 방법을 검색합니다.
-
-    - platform: '카카오', '네이버', '구글', '유튜브' 등
+    화장 장려금 조례를 검색합니다.  
+    제외 대상에 대한 정보가 말이 뒤죽박죽 되어 이해하기 어려울 경우 다음의 사항을 바탕으로 이해한다.
+    1.「장사 등에 관한 법률」 제7조 제2항을 위반한 경우
+    2. 다른 법령에 따라 화장에 대한 지원금을 받은 경우
+    
+    Args:
+        query: 검색어 (예: "지원 대상")
+        region: 지역명 (예: "강원도 고성군", "서울 강남")
     """
-    query = f"{platform} 계정의 사전·사후 처리 방법 (사망 시 계정 관리, 메모리얼 서비스 등)"
-    filter_query = {"category": "digital_legacy", "platform": platform}
-    return _safe_search(query=query, k=5, filter=filter_query)
+    filter_dict = {"type": "Cremation_Subsidy_Ordinance"}
+    k = 3
+    
+    if region:
+        region_list = region_list_json["cremation_detail"] + region_list_json["cremation_etcetera"]
+        matched = find_matching_regions(region, region_list, n=k)  # 여러 개
+        # print(f"화장 장려금 조례 매칭된 지역들 최대 {k}개",matched)
 
+        if matched:
+            if len(matched) == 1:
+                filter_dict["region"] = matched[0]  # 1개면 직접
+            else:
+                filter_dict["region"] = {"$in": matched}  # 여러 개면 in
+
+    results = vectorstore_ordinance.similarity_search(query, k=k, filter=filter_dict)
+    
+    # print("툴 검색 결과:",results)
+    return results
 
 @tool
-def search_legacy(topic: str) -> str:
+def search_funeral_facilities(query: str, region: str = None, regions : List[str] = None):
     """
-    [유산/상속 검색] 상속 절차, 상속포기/한정승인, 유언, 유류분 등
-    유산 관련 법률/절차 정보를 검색합니다.
+    장례 시설을 검색합니다. 
+    
+    Args:
+        query: 검색 문장 (예: "경기도 수원시 시설 좋은 묘지", "대구 남구 천주교 납골당")
+        region: 지역명, 지역 한 개 검색 시 사용 (예: "경기도 성남시", "경상북도 경주시")
+        regions: 지역명, 지역 여러개 검색 시 사용 (예: ["경기도 의왕시", "경기도 안양시", "경기도 군포시"], ["경상남도 양산시", "경상남도 밀양시"])
 
-    - topic: 사용자가 알고 싶어 하는 주제 키워드
-      예: '상속 순위', '한정승인', '유류분', '유언장 효력'
     """
-    query = f"유산/상속 관련: {topic} 에 대해 설명해줘"
-    filter_query = {"category": "legacy"}
-    return _safe_search(query=query, k=5, filter=filter_query)
+    print(f"쿼리 : {query}, 지역 : {region}, 지역들 : {regions}")
 
+    all_regions = []
+    for r_list in facilities_region_list_json.values():
+        all_regions.extend(r_list)
+    all_regions = sorted(list(set(all_regions)))
 
-# ConversationEngine 및 info_agent 에서 사용하는 Tool 리스트
-TOOLS_INFO = [
-    search_funeral_facilities,
-    search_public_funeral_ordinance,
-    search_cremation_subsidy_ordinance,
-    search_digital_legacy,
-    search_legacy,
-]
+    results_list = []
+    if regions == None:
+        regions = [region]
+    k = 10 // len(regions)     # 비장의 코드 : 지역 많아지면 시간 느려져서 이렇게 했다. 물론 지역은 최대 3개로(프롬프트를 통해) 제한함.
+
+    for rgn in regions:
+
+        filter_dict = {}
+
+        if rgn: # 하나의 지역
+            matched = find_matching_regions(rgn, all_regions, n=100) 
+            print(f"매칭된 지역: {matched}")
+
+            if matched:         # 매치 없더라도 아무거나 벡터 유사도로 넘겨줄라고 else: continue 안 했다. 
+                if len(matched) == 1:
+                    filter_dict["region"] = matched[0]  
+                else:
+                    filter_dict["region"] = {"$in": matched} 
+
+        try:
+            results = vectorstore_funeral_facilities.similarity_search(
+                query, 
+                k=k, 
+                filter=filter_dict
+            )
+            print(f"검색 결과 {len(results)}건 반환")
+            results_list.extend(results)
+            
+        except Exception as e:
+            print(f"검색 오류: {e}")
+            continue
+        
+        
+    unique_results = []
+    seen_content = set()
+    for doc in results_list:
+        if doc.page_content not in seen_content:
+            unique_results.append(doc)
+            seen_content.add(doc.page_content)
+
+    # print(f"최종 병합된 검색 결과: {len(unique_results)}건")
+    return unique_results
+
+@tool
+def search_digital_legacy(query: str):
+    """
+    디지털 유산 정보를 검색합니다.
+    
+    Args:
+        query: 검색어 (예: "카카오톡 탈퇴 시 삭제되는 데이터", "추모 프로필 주요 기능 요약")
+    """
+    
+    
+    results = vectorstore_digital_legacy.similarity_search(query, k=5)
+
+    print("툴 검색 결과:",results)
+    return results
+
+@tool
+def search_legacy(query: str):
+    """
+    유산과 관련된 정보를 검색합니다.  
+
+    Args:
+        query: 검색어 (예: "피상속인의 직계비속", "증여세 과세 대상")
+    """
+    
+    results = vectorstore_legacy.similarity_search(query, k=5)
+
+    print("툴 검색 결과:",results)
+    return results
+
+# 외부 모듈에서 import 할 수 있도록 TOOLS 리스트 정의
+TOOLS_INFO = [search_public_funeral_ordinance, 
+              search_cremation_subsidy_ordinance, 
+              search_funeral_facilities,
+              search_digital_legacy,  
+              search_legacy]

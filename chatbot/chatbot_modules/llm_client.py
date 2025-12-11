@@ -1,6 +1,10 @@
 import os
+from dotenv import load_dotenv
+
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
+
+load_dotenv()
 
 # 환경 변수(OPENAI_API_KEY)는 settings.py 또는 실행 환경에서 미리 설정된다고 가정
 api_key = os.getenv("OPENAI_API_KEY")
@@ -30,7 +34,7 @@ class LLMClient:
         Tool Calling을 지원하는 모델 객체를 반환합니다.
 
         - tools: LangChain Tool 리스트
-        - empathy_agent 등에서 Tool을 사용하는 노드에 주입할 때 사용
+        - empathy_agent, info_agent에서 Tool을 사용하는 노드에 주입할 때 사용
         """
         return self.chat_model.bind_tools(tools)
 

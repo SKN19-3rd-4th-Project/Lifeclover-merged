@@ -16,6 +16,7 @@ CHATBOT_DIR = os.path.join(BASE_DIR, 'chatbot')
 sys.path.insert(0, CHATBOT_DIR)
 
 from conversation_engine import ConversationEngine
+from .member_manager import MemberManager
 
 # Initialize conversation engine (singleton pattern)
 conversation_engine = None
@@ -63,11 +64,14 @@ def chat_message(request):
         # Get conversation engine
         engine = get_conversation_engine()
         
-        # Get user_id from cookie or generate new one
-        user_id = request.COOKIES.get("user_uuid")
-        if not user_id:
-            # Fallback: Generate via backend
-            user_id = engine.session_manager.generate_user_id()
+        # Get user_id: prioritize authenticated user's username, fallback to cookie UUID
+        if request.user.is_authenticated:
+            user_id = request.user.username
+        else:
+            user_id = request.COOKIES.get("user_uuid")
+            if not user_id:
+                # Fallback: Generate via backend
+                user_id = engine.session_manager.generate_user_id()
         
         # If info mode with service type, prepend context to first message
         if mode == "info" and service_type:
@@ -171,3 +175,222 @@ def generate_diary(request):
             "success": False,
             "error": f"다이어리 생성 중 오류가 발생했습니다: {str(e)}"
         }, status=500)
+
+member_manager = MemberManager()
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def signup_api(request):
+    """
+    회원가입 API
+    Expects JSON: {
+        "username": str,
+        "password": str,
+        "email": str (optional),
+        "checklist_data": {
+            "A1": str,  // 호칭/이름
+            "A2": str,  // 움직임/기동성
+            "B1": str,  // 현재 마음
+            ...
+        }
+    }
+    Returns JSON: {"success": bool, "message": str}
+    """
+    try:
+        data = json.loads(request.body)
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        email = data.get('email', '').strip()
+        checklist_data = data.get('checklist_data', {})
+        
+        if not username or not password:
+            return JsonResponse({
+                'success': False,
+                'message': '아이디와 비밀번호를 입력해주세요.'
+            }, status=400)
+        
+        # member_manager를 통해 회원가입 처리
+        success, message = member_manager.register_member(
+            request,
+            username=username,
+            password=password,
+            email=email,
+            checklist_data=checklist_data
+        )
+        
+        status_code = 200 if success else 400
+        return JsonResponse({
+            'success': success,
+            'message': message
+        }, status=status_code)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': '잘못된 JSON 형식입니다.'
+        }, status=400)
+    except Exception as e:
+        print(f"Signup error: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'회원가입 중 오류가 발생했습니다: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def login_api(request):
+    """
+    로그인 API
+    Expects JSON: {
+        "username": str,
+        "password": str
+    }
+    Returns JSON: {
+        "success": bool,
+        "message": str,
+        "profile": {
+            "username": str,
+            "preferred_name": str,
+            "mobility_status": str,
+            "current_emotion": str,
+            "mobility_display": str,
+            "emotion_display": str
+        } (only on success)
+    }
+    """
+    try:
+        data = json.loads(request.body)
+        username = data.get('username', '').strip()
+        password = data.get('password', '').strip()
+        
+        if not username or not password:
+            return JsonResponse({
+                'success': False,
+                'message': '아이디와 비밀번호를 입력해주세요.'
+            }, status=400)
+        
+        # member_manager를 통해 로그인 처리
+        result = member_manager.login_member(
+            request,
+            username=username,
+            password=password
+        )
+        
+        # Unpack result (now returns 3 values)
+        if len(result) == 3:
+            success, message, profile_data = result
+        else:
+            # Fallback for old return format
+            success, message = result
+            profile_data = None
+        
+        if success:
+            return JsonResponse({
+                'success': True,
+                'message': message,
+                'profile': profile_data
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': message
+            }, status=401)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': '잘못된 JSON 형식입니다.'
+        }, status=400)
+    except Exception as e:
+        print(f"Login error: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'로그인 중 오류가 발생했습니다: {str(e)}'
+        }, status=500)
+
+
+def signup_view(request):
+    if request.method == 'POST':
+        data = request.POST
+        checklist_data = {
+            # 폼 데이터에서 체크리스트 항목 추출
+            'q1': data.get('q1'),
+            'q2': data.get('q2'),
+            # ...
+        }
+        success, message = member_manager.register_member(
+            request,
+            username=data.get('username'),
+            password=data.get('password'),
+            email=data.get('email'),
+            checklist_data=checklist_data
+        )
+        if success:
+            return redirect('login') # 로그인 페이지로 이동
+        else:
+            return render(request, 'signup.html', {'error': message})
+    return render(request, 'signup.html')
+
+def login_view(request):
+    if request.method == 'POST':
+        data = request.POST
+        result = member_manager.login_member(
+            request,
+            username=data.get('username'),
+            password=data.get('password')
+        )
+        # Unpack result (now returns 3 values)
+        if len(result) == 3:
+            success, message, profile_data = result
+        else:
+            success, message = result
+        
+        if success:
+            return redirect('home') # 메인 페이지로 이동
+        else:
+            return render(request, 'login.html', {'error': message})
+    return render(request, 'login.html')
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def withdraw_api(request):
+    """
+    회원탈퇴 API
+    Returns JSON: {"success": bool, "message": str}
+    """
+    try:
+        # 사용자 인증 확인
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'success': False,
+                'message': '로그인이 필요합니다.'
+            }, status=401)
+        
+        # member_manager를 통해 회원탈퇴 처리
+        success, message = member_manager.withdraw_member(request)
+        
+        status_code = 200 if success else 400
+        return JsonResponse({
+            'success': success,
+            'message': message
+        }, status=status_code)
+        
+    except Exception as e:
+        print(f"Withdraw error: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': f'회원탈퇴 중 오류가 발생했습니다: {str(e)}'
+        }, status=500)
+
+
+def withdraw_view(request):
+    if request.method == 'POST':
+        success, message = member_manager.withdraw_member(request)
+        if success:
+            return redirect('home')
+        else:
+            return JsonResponse({'status': 'error', 'message': message})
+    return JsonResponse({'status': 'error', 'message': '잘못된 요청입니다.'})

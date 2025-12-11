@@ -3,6 +3,10 @@
 
 {% block title %}Lifeclover - 당신의 클로버가 되어 드릴게요{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+{% endblock %}
+
 {% block content %}
 <header class="header">
   <div class="container">
@@ -33,7 +37,7 @@
           클로버가 되어드릴게요
         </h1>
         <div class="hero-cta">
-          <button type="button" class="cta-button primary" data-target-page="services">라잎클로버란?</button>
+          <button type="button" class="cta-button primary" data-target-page="about">라잎클로버란?</button>
         </div>
       </div>
 
@@ -44,6 +48,73 @@
 
     <div class="hero-input-section">
       <input type="text" class="hero-input" placeholder="오늘의 일을 나누고 싶으신가요?">
+    </div>
+  </section>
+
+  <section class="about page-section" data-page="about" hidden>
+    <div class="about-container">
+      <div class="about-grid">
+        <article class="about-card">
+          <div class="about-icon">📖</div>
+          <h3 class="about-title">알려줘요</h3>
+          <p class="about-desc">장례 시설 및 조례, 디지털 개인 정보 처리,<br>
+            유산처리 정보를 안내합니다.</p>
+        </article>
+        <article class="about-card">
+          <div class="about-icon">💬</div>
+          <h3 class="about-title">대화해요</h3>
+          <p class="about-desc">편하게 대화해요. 라잎이와 생활 루틴 혹은 감정에 대해<br>
+            공유하고 소중한 일상을 함께 쌓아갈 수 있어요!</p>
+        </article>
+        <article class="about-card">
+          <div class="about-icon">✍️</div>
+          <h3 class="about-title">다이어리</h3>
+          <p class="about-desc">소중한 하루를 대신 정리해드려요.</p>
+        </article>
+      </div>
+
+      <div class="about-ask">
+        <div class="ask-header">
+          <span class="ask-bulb">💡</span>
+          <h2 class="ask-title">라잎이에게 물어보세요</h2>
+        </div>
+
+        <div class="ask-stage">
+          <div class="ask-swiper swiper">
+            <div class="swiper-wrapper">
+              <div class="swiper-slide ask-slide" data-question="서울 종로구에 있는 장례식장 좀 알려줘">
+                <div class="ask-answer-card">
+                  <p class="answer-title">서울적십자병원장례식장</p>
+                  <p class="answer-body">주소: 서울특별시 종로구 새문안로 9 (평동, 적십자병원)</p>
+                  <p class="answer-body">전화: 02-2002-8444</p>
+                </div>
+              </div>
+              <div class="swiper-slide ask-slide" data-question="서울에서 화장 장려금 받을 수 있어?">
+                <div class="ask-answer-card">
+                  <p class="answer-title">서울시 화장 장려금</p>
+                  <p class="answer-body">지원 대상: 주민등록상 서울 거주자</p>
+                  <p class="answer-body">신청: 사망자 주소지 관할 주민센터</p>
+                </div>
+              </div>
+              <div class="swiper-slide ask-slide" data-question="카카오 계정 사망 후 처리 방법 알려줘">
+                <div class="ask-answer-card">
+                  <p class="answer-title">카카오 디지털 유산 처리</p>
+                  <p class="answer-body">추모 프로필 해제 및 계정 삭제 절차 안내</p>
+                  <p class="answer-body">필요 서류: 가족관계증명서, 신분증 사본 등</p>
+                </div>
+              </div>
+            </div>
+            <div class="swiper-button-prev ask-nav"></div>
+            <div class="swiper-button-next ask-nav"></div>
+            <div class="swiper-pagination ask-dots"></div>
+          </div>
+
+          <div class="ask-question-chip">서울 종로구에 있는 장례식장 좀 알려줘</div>
+          <div class="ask-mascot">
+            <img src="{% static 'img/lify3-1 1.png' %}" alt="라잎 캐릭터" loading="lazy">
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -81,7 +152,8 @@
               <div class="quick-wrap">
                 <button type="button" class="quick-toggle" data-quick-toggle>무엇이 궁금하세요?</button>
                 <div class="quick-panel" data-quick-panel>
-                  <button type="button" class="quick-item" data-quick-question="funeral_facilities">장례 시설 예시 질문 보기</button>
+                  <button type="button" class="quick-item" data-quick-question="funeral_facilities">장례 시설 예시 질문
+                    보기</button>
                   <button type="button" class="quick-item" data-quick-question="support_policy">지원 정책 예시 질문 보기</button>
                   <button type="button" class="quick-item" data-quick-question="inheritance">유산 상속 예시 질문 보기</button>
                   <button type="button" class="quick-item" data-quick-question="digital_info">디지털 정보 예시 질문 보기</button>
@@ -89,11 +161,8 @@
               </div>
             </div>
             <div class="chat-input-body">
-              <textarea
-                class="chat-input"
-                placeholder="무엇이 궁금하세요?... (Enter로 전송)"
-                data-chat-input="services"
-              ></textarea>
+              <textarea class="chat-input" placeholder="무엇이 궁금하세요?... (Enter로 전송)"
+                data-chat-input="services"></textarea>
             </div>
             <div class="chat-actions">
               <button type="button" class="send-button modern" data-send-message="services">전송</button>
@@ -145,11 +214,7 @@
         <div class="chat-input-container">
           <div class="chat-input-top"></div>
           <div class="chat-input-body">
-            <textarea
-              class="chat-input"
-              placeholder="무엇이든 물어보세요... (Enter로 전송)"
-              data-chat-input="chat"
-            ></textarea>
+            <textarea class="chat-input" placeholder="무엇이든 물어보세요... (Enter로 전송)" data-chat-input="chat"></textarea>
           </div>
           <div class="chat-actions">
             <button type="button" class="send-button modern" data-send-message="chat">전송</button>
@@ -174,6 +239,10 @@
 
         <div class="diary-detail" data-diary-detail></div>
       </div>
+
+      <div class="diary-generate-wrap">
+        <button type="button" class="button diary-generate-btn" data-generate-diary>오늘 다이어리 생성</button>
+      </div>
     </div>
   </section>
 
@@ -186,11 +255,11 @@
       <form class="modal-form" data-login-form>
         <div class="modal-field">
           <label class="sr-only" for="login-username">아이디</label>
-          <input id="login-username" name="username" type="text" placeholder="ID를 입력하세요." required>
+          <input id="login-username" name="username" type="text" placeholder="아이디를 입력하세요." required>
         </div>
         <div class="modal-field">
           <label class="sr-only" for="login-password">비밀번호</label>
-          <input id="login-password" name="password" type="password" placeholder="PWD를 입력하세요." required>
+          <input id="login-password" name="password" type="password" placeholder="비밀번호를 입력하세요." required>
         </div>
         <div class="modal-actions">
           <button type="submit" class="modal-btn primary">로그인</button>
@@ -213,4 +282,8 @@
     </div>
   </div>
 </main>
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js" defer></script>
+{% endblock %}
 {% endblock %}
