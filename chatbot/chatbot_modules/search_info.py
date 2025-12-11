@@ -1,3 +1,12 @@
+# ======================================ksu추가=========================================
+# 1. .env 로드 추가 (파일 상단)
+from pathlib import Path
+from dotenv import load_dotenv
+current_dir = Path(__file__).resolve().parent
+env_path = current_dir.parent.parent / '.env'
+load_dotenv(dotenv_path=env_path)
+# ======================================ksu추가=========================================
+
 import os
 import json
 import logging
@@ -9,6 +18,8 @@ from pinecone import Pinecone
 from langchain_openai import OpenAIEmbeddings
 from langchain_core.tools import tool
 from langchain_pinecone import PineconeVectorStore
+
+
 
 # 지역 유사도 위한 함수.
 from difflib import get_close_matches

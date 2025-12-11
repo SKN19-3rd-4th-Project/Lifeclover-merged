@@ -44,3 +44,6 @@ __pycache__/
 *.model
 /chatbot/sessions/
 __pycache__/
+
+# Local scripts
+*.bat
