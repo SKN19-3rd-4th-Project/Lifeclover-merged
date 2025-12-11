@@ -18,26 +18,25 @@ logger = logging.getLogger(__name__)
 # max_results=3: 속도와 토큰 절약을 위해 상위 3개만 검색
 tavily_search = TavilySearch(max_results=3)
 tavily_search.name = "search_realtime_info_tool"
-# ======================================ksu수정(기존 주석처리)=========================================
-# tavily_search.description = """
-# [Tool] 실시간 혹은 최근의 정보가 필요할 때 웹에서 검색합니다.
-# [도구 사용 기준]
-# 최신 뉴스, 날씨, 현재 트렌드 등 **대중문화** 또는 **실시간 정보**에 대해 이야기할 필요가 있을 때
-# [도구를 사용하면 안되는 상황]
-# 위로가 필요한 일반적인 대화나, 철학적인 질문에는 **절대** 사용하지 마세요.
-# [도구가 필요한 대화]
-# 사용자가 '요즘 날씨', '오늘 날씨', '오늘 뉴스', '날씨', '뉴스', '영화', '음악', '드라마' 정보를 구체적으로 말할 때만 사용하세요.
-# """
+
+# ======================================ksu수정=========================================
+# [검색 도구 프롬프트 수정]
+# 목표: 사실 정보(추억 회상 포함)와 철학적 지혜를 명확히 구분하여 환자에게 혼란을 주지 않음.
 
 tavily_search.description = """
-[Tool] 실시간 정보, 뉴스, 혹은 사용자의 질문에 대한 구체적인 해결책이나 팁(Tip)이 필요할 때 웹에서 검색합니다.
+[Tool] 웹 검색 도구입니다. **구체적인 사실(Fact)**을 찾을 때만 사용하세요.
 
-[도구 사용 기준]
-1. 최신 뉴스, 날씨, 트렌드 등 실시간 정보가 필요할 때
-2. 사용자가 '방법', '팁', '조언', '정보' 등을 구체적으로 물어볼 때 (예: "기억력 좋아지는 법", "잠 잘 오는 팁")
+[사용 가능한 상황]
+1. **실시간 정보**: 오늘 날씨, 최신 뉴스, 현재 트렌드.
+2. **구체적 해결책**: "잠 잘 오는 법", "소화 잘 되는 자세" 등 검증된 팁(Tip).
+3. **추억 회상 보조 (중요)**: 사용자가 노래 제목, 가사, 영화/드라마 제목, 연예인 이름, 과거의 특정 사건 등을 물어볼 때.
+   - 예: "그 노래 가사가 뭐였지?", "감자별 OST 제목이 뭐야?", "90년대 유행했던 드라마"
+   - **주의**: 환자의 기억이 흐릿할 수 있으므로, 반드시 검색을 통해 **정확한 사실**을 확인하고 답변해야 합니다.
 
-[도구를 사용하면 안되는 상황]
-단순한 위로나 공감이 필요한 대화, 정답이 없는 철학적인 질문에는 사용하지 마세요.
+[절대 사용 금지 (Strictly Forbidden)]
+- **철학적인 질문**: "죽음이란 무엇인가", "삶의 의미는 무엇인가", "왜 사는가" 등 정답이 없는 질문에는 **절대 사용하지 마세요**.
+  - 이런 질문에는 반드시 **`search_welldying_wisdom_tool`**을 사용해야 합니다.
+- **단순 위로**: 정보가 필요 없는 감정적 호소에는 도구를 사용하지 마세요.
 """
 # ======================================ksu수정=========================================
 
@@ -62,53 +61,6 @@ except Exception as e:
 # 대화 규칙
 with open(file_path, 'r', encoding='utf-8') as f:
     RULES = json.load(f)
-
-# ======================================ksu수정(기존 주석처리)=========================================
-# @tool
-# def recommend_activities_tool(user_emotion: str, mobility_status: str = "거동 가능") -> str:
-#     """
-#     [Tool] 사용자의 감정과 거동 상태를 기반으로 '의미 있는 활동'을 추천합니다.
-#     사용자가 심심해하거나, 무기력하거나, 기분 전환이 필요할 때 호출하세요.
-#     """
-#     index = pc.Index(TALK_INDEX_NAME)
-#     if not index: 
-#         return "DB 연결 오류"
-#     print("[Tool: 활동 추천]")
-#     # 1. Logic: 감정 -> 태그 매핑
-#     mappings = RULES.get("mappings", {})
-#   
-#     target_tags = []
-#     for key, tags in mappings.get("emotion_to_feeling_tags", {}).items():
-#         if key in user_emotion: target_tags.extend(tags)
-#     if not target_tags: target_tags = ["평온/이완"]
-#     energy_limit = 5
-#     for key, val in mappings.get("mobility_to_energy_range", {}).items():
-#         if key in mobility_status:
-#             energy_limit = val.get("max_energy", 5)
-#     # 2. RAG: Pinecone Search
-#     query = f"효과: {', '.join(target_tags)}인 활동"
-#     vec = embeddings.embed_query(query)
-#   
-#     res = index.query(
-#         vector=vec, 
-#         top_k=10,
-#         include_metadata=True, 
-#         filter={"type": {"$eq": "activity"}, "ENERGY_REQUIRED": {"$lte": energy_limit}}
-#     )
-#     matches = res.get('matches', [])
-#     if not matches: 
-#         return "적절한 활동을 찾지 못했습니다."
-#   
-#     selected_matches = random.sample(matches, min(len(matches), 3))
-#     results = []
-#     for m in selected_matches:
-#         meta = m['metadata']
-#         results.append(f"- {meta.get('activity_kr')} (기대효과: {meta.get('FEELING_TAGS')})")
-#   
-#     print("[Tool] 검색 결과\n", results)
-#     return "\n".join(results)
-# 
-# ======================================ksu수정=========================================
 
 # ======================================ksu추가=========================================
 @tool
@@ -171,7 +123,7 @@ def recommend_activities_tool(user_emotion: str, mobility_status: str = "거동 
   
     print("[Tool] 검색 결과\n", results)
     return "\n".join(results)
-# ======================================ksu추가=========================================
+
 @tool
 def search_empathy_questions_tool(context: str) -> str:
     """
