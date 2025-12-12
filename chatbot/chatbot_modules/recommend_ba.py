@@ -15,29 +15,36 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# max_results=3: 속도와 토큰 절약을 위해 상위 3개만 검색
-tavily_search = TavilySearch(max_results=3)
-tavily_search.name = "search_realtime_info_tool"
+# Tavily 클라이언트 (직접 도구로 쓰지 않고 내부 호출용으로 사용)
+_tavily_client = TavilySearch(max_results=3)
 
 # ======================================ksu수정=========================================
-# [검색 도구 프롬프트 수정]
-# 목표: 사실 정보(추억 회상 포함)와 철학적 지혜를 명확히 구분하여 환자에게 혼란을 주지 않음.
+# [검색 도구 프롬프트 수정 & 로깅 추가]
+@tool
+def search_realtime_info_tool(query: str) -> str:
+    """
+    [Tool] 웹 검색 도구입니다. **구체적인 사실(Fact)**을 찾을 때만 사용하세요.
 
-tavily_search.description = """
-[Tool] 웹 검색 도구입니다. **구체적인 사실(Fact)**을 찾을 때만 사용하세요.
+    [사용 가능한 상황]
+    1. **실시간 정보**: 오늘 날씨, 최신 뉴스, 현재 트렌드.
+    2. **구체적 해결책**: "잠 잘 오는 법", "소화 잘 되는 자세" 등 검증된 팁(Tip).
+    3. **추억 회상 보조 (중요)**: 사용자가 노래 제목, 가사, 영화/드라마 제목, 연예인 이름, 과거의 특정 사건 등을 물어볼 때.
+       - 예: "그 노래 가사가 뭐였지?", "감자별 OST 제목이 뭐야?", "90년대 유행했던 드라마"
+       - **주의**: 환자의 기억이 흐릿할 수 있으므로, 반드시 검색을 통해 **정확한 사실**을 확인하고 답변해야 합니다.
 
-[사용 가능한 상황]
-1. **실시간 정보**: 오늘 날씨, 최신 뉴스, 현재 트렌드.
-2. **구체적 해결책**: "잠 잘 오는 법", "소화 잘 되는 자세" 등 검증된 팁(Tip).
-3. **추억 회상 보조 (중요)**: 사용자가 노래 제목, 가사, 영화/드라마 제목, 연예인 이름, 과거의 특정 사건 등을 물어볼 때.
-   - 예: "그 노래 가사가 뭐였지?", "감자별 OST 제목이 뭐야?", "90년대 유행했던 드라마"
-   - **주의**: 환자의 기억이 흐릿할 수 있으므로, 반드시 검색을 통해 **정확한 사실**을 확인하고 답변해야 합니다.
-
-[절대 사용 금지 (Strictly Forbidden)]
-- **철학적인 질문**: "죽음이란 무엇인가", "삶의 의미는 무엇인가", "왜 사는가" 등 정답이 없는 질문에는 **절대 사용하지 마세요**.
-  - 이런 질문에는 반드시 **`search_welldying_wisdom_tool`**을 사용해야 합니다.
-- **단순 위로**: 정보가 필요 없는 감정적 호소에는 도구를 사용하지 마세요.
-"""
+    [절대 사용 금지 (Strictly Forbidden)]
+    - **철학적인 질문**: "죽음이란 무엇인가", "삶의 의미는 무엇인가", "왜 사는가" 등 정답이 없는 질문에는 **절대 사용하지 마세요**.
+      - 이런 질문에는 반드시 **`search_welldying_wisdom_tool`**을 사용해야 합니다.
+    - **단순 위로**: 정보가 필요 없는 감정적 호소에는 도구를 사용하지 마세요.
+    """
+    print(f"[Tool: 검색 요청] 검색어: {query}")
+    try:
+        result = _tavily_client.invoke(query)
+        print(f"[Tool: 검색 결과] {result}")
+        return result
+    except Exception as e:
+        print(f"[Tool: 검색 오류] {e}")
+        return f"검색 중 오류가 발생했습니다: {e}"
 # ======================================ksu수정=========================================
 
 # 데이터 파일 경로
@@ -187,8 +194,4 @@ def search_welldying_wisdom_tool(topic: str) -> str:
     return "\n---\n".join(results)
     
 # 외부 모듈에서 import 할 수 있도록 TOOLS 리스트 정의
-TOOLS_TALK = [recommend_activities_tool, search_empathy_questions_tool, search_welldying_wisdom_tool]
-
-# Tavily 검색이 유효할 때만 추가
-if tavily_search:
-    TOOLS_TALK.append(tavily_search)
+TOOLS_TALK = [recommend_activities_tool, search_empathy_questions_tool, search_welldying_wisdom_tool, search_realtime_info_tool]
