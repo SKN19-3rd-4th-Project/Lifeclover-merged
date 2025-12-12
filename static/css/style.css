@@ -2021,3 +2021,61 @@ body.chat-mode .chat-panel.is-chatting .chat-messages {
     font-size: 14px;
   }
 }
+
+/* 봇 응답형식을 위한 마크다운 문법 */
+.message-content.markdown-body {
+    text-align: left;
+    line-height: 1.6;
+}
+
+.message-content.markdown-body h1, 
+.message-content.markdown-body h2, 
+.message-content.markdown-body h3 {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-top: 15px;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.message-content.markdown-body ul {
+    list-style-type:disc;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    padding-left: 24px;
+    list-style-position: outside;
+}
+
+.message-content.markdown-body ol {
+    list-style-type: decimal;
+    margin-top: 5px;
+    margin-bottom: 10px;
+    padding-left: 24px;
+    list-style-position: outside;
+}
+
+.message-content.markdown-body li {
+    margin-bottom: 4px;
+    list-style-type: disc; 
+}
+
+.message-content.markdown-body ol li {
+    list-style-type: decimal;
+}
+.message-content.markdown-body ul li {
+    list-style-type: disc;
+}
+.message-content.markdown-body strong {
+    color: #1a1a1a;
+    font-weight: 700;
+    padding: 0 2px;
+    border-radius: 3px;
+}
+
+.message-content.markdown-body p {
+    margin-bottom: 10px;
+}
+
+.message-content.markdown-body >:last-child {
+    margin-bottom: 0;
+}

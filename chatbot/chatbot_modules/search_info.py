@@ -144,7 +144,9 @@ def search_cremation_subsidy_ordinance(query: str, region: str = None):
 @tool
 def search_funeral_facilities(query: str, region: str = None, regions : List[str] = None):
     """
-    장례 시설을 검색합니다. 
+    장례 관련 시설을 검색할 때 사용합니다. 
+    장례식장, 봉안당, 묘지, 화장시설, 자연장지의 위치를 찾을 때 사용합니다.
+    사용자가 원하는 장례 시설을 검색하고 모든 장례시설을 검색할 땐 장례식장, 봉안당, 묘지, 화장시설, 자연장지 모두를 검색합니다. 
     
     Args:
         query: 검색 문장 (예: "경기도 수원시 시설 좋은 묘지", "대구 남구 천주교 납골당")

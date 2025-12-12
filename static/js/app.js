@@ -459,8 +459,13 @@ if (window.__LIFECLOVER_APP_INIT__) {
             <span class="dot"></span>
           `;
           } else {
+          if (typeof marked !== 'undefined') {
+            content.innerHTML = marked.parse(msg.content); 
+            content.classList.add('markdown-body'); 
+          } else {
             content.textContent = msg.content;
           }
+        }
 
           wrapper.appendChild(content);
           msgEl.appendChild(wrapper);
