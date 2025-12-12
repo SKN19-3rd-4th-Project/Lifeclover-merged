@@ -142,7 +142,7 @@
 | **Embedding Model** | [![text-embedding-3-small](https://img.shields.io/badge/text--embedding--3--small-00A67D?style=for-the-badge&logo=openai&logoColor=white)](https://platform.openai.com/docs/guides/embeddings) |
 | **Vector DB**       | [![Pinecone](https://img.shields.io/badge/Pinecone-0075A8?style=for-the-badge&logo=pinecone&logoColor=white)](https://www.pinecone.io/) |
 | **Orchestration / RAG** | [![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://www.langchain.com/) [![LangGraph](https://img.shields.io/badge/LangGraph-000000?style=for-the-badge)](https://langchain-ai.github.io/langgraph/) |
-| **Frontend** | ![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=React&logoColor=black) |
+| **Web Framework** | ![Django](https://img.shields.io/badge/DJANGO-092E20?style=for-the-badge&logo=django&logoColor=white) |
 | **Development Env** | [![VS Code](https://img.shields.io/badge/VS%20Code-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://code.visualstudio.com/) [![Conda](https://img.shields.io/badge/Conda-3EB049?style=for-the-badge&logo=anaconda&logoColor=white)](https://www.anaconda.com/)
 
 <br>
@@ -220,6 +220,42 @@
 ---
 
 # 💡 테스트 계획 및 결과 보고서
+
+### 기능적 테스트
+
+입력 처리 검증
+
+- 정상 입력 / 비정상 입력 / 빈 값 처리
+
+응답 구조의 일관성 확인
+
+- 반환되는 메시지 또는 데이터의 필드가 스키마에 맞게 구성되어 있는지 확인
+
+탭 간 이동 플로우 검증
+
+- 정보 → 대화 → 다이어리 이동 시 UI 흐름이 깨지지 않는지 확인
+
+결과 반영 확인
+
+- 백엔드 처리 결과가 프론트에 즉시 반영되는지(응답 지연, 잘못된 렌더링 등)
+
+### 비기능적 테스트
+
+응답 속도
+
+- 동일 요청 3회 반복 시 응답 지연 편차 확인
+
+오류 및 예외 처리
+
+- 400/500 발생 시 사용자 친화적 메시지 노출 여부
+
+접근성(WCAG Level AA)
+
+- 텍스트 대비, 버튼 크기, 포커스 이동 등 공통 UI 요소 준수 여부
+
+안정성
+
+- 서버 재시작, 새로고침 후 기능 유지 여부(세션·상태 값 점검)
 
 <br>
 
