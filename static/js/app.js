@@ -528,16 +528,19 @@ if (window.__LIFECLOVER_APP_INIT__) {
 
       let targetMessages = getMessages();
 
-      // Add user message to UI
+      // 1. 사용자 메시지 UI 즉시 추가
       targetMessages.push({ role: 'user', content: text });
       renderMessages();
       if (inputEl) inputEl.value = '';
 
-      // Show loading state
-      state.isLoading = true;
-      const loadingMsg = { role: 'bot', content: '', loading: true };
-      targetMessages.push(loadingMsg);
+      // 2. 봇 메시지 Placeholder(빈 껍데기) 추가
+      // loading: true 상태로 두면 점 3개 애니메이션이 나옴.
+      // 스트리밍이 시작되면 loading을 false로 바꾸고 내용을 채울 예정.
+      const botMsgObj = { role: 'bot', content: '', loading: true };
+      targetMessages.push(botMsgObj);
       renderMessages();
+
+      state.isLoading = true;
 
       try {
         if (panelKey === 'services' && servicesGrid) {
@@ -556,31 +559,45 @@ if (window.__LIFECLOVER_APP_INIT__) {
           })
         });
 
-        const cloned = response.clone();
-        let rawText = '';
-        let data = null;
-        try {
-          rawText = await cloned.text();
-          data = rawText ? JSON.parse(rawText) : null;
-        } catch (parseErr) {
-          data = null;
-        }
-
         if (!response.ok) {
-          throw new Error((data && data.error) || `HTTP ${response.status}`);
+           const errData = await response.json().catch(() => ({}));
+           throw new Error(errData.error || `HTTP ${response.status}`);
         }
 
-        // Remove loading message
-        targetMessages = targetMessages.filter(msg => msg !== loadingMsg);
-        setMessages(targetMessages);
+        // [수정] 스트리밍 데이터 읽기 시작
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let isFirstChunk = true;
 
-        targetMessages.push({ role: 'bot', content: (data && data.response) || '응답이 없습니다.' });
-        // Reset service type after first message in info mode
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          // Uint8Array를 텍스트로 변환
+          const chunk = decoder.decode(value, { stream: true });
+          
+          if (isFirstChunk) {
+            // 첫 데이터가 들어오면 로딩 상태 해제
+            botMsgObj.loading = false;
+            isFirstChunk = false;
+          }
+
+          // 메시지 내용에 청크 누적
+          botMsgObj.content += chunk;
+          
+          // UI 다시 그리기 (실시간 업데이트)
+          // renderMessages 함수 안에서 marked.parse가 호출되어 마크다운이 렌더링됨
+          renderMessages();
+        }
+
+        // 스트리밍 완료 후 처리
         if (panelKey === 'services') state.selectedServiceType = null;
+
       } catch (error) {
-        // Remove loading message
-        targetMessages = targetMessages.filter(msg => msg !== loadingMsg);
+        // 에러 발생 시 로딩 메시지 제거 후 에러 메시지 추가
+        targetMessages = targetMessages.filter(msg => msg !== botMsgObj);
         setMessages(targetMessages);
+        
         targetMessages.push({
           role: 'bot',
           content: `서버와 연결할 수 없습니다. (${error.message || error}) 잠시 후 다시 시도해주세요.`

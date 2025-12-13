@@ -59,5 +59,8 @@ class LLMClient:
         ]
 
         # invoke() 호출 결과에서 content만 추출
-        response = self.chat_model.invoke(messages)
+        # 아래는 네임을 설정해서 붙여주는 것, 이후 조건으로 사용가능. 현재는 사용하지 않음.
+        # response = self.chat_model.with_config(run_name='Calculation').invoke(messages)
+        # config로 callbacks을 []로 줘 대화해요에서 진지함 점수를 스트리밍하는 것을 방지. 
+        response = self.chat_model.invoke(messages, config={'callbacks':[]})
         return response.content

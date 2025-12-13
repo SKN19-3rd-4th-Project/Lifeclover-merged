@@ -161,3 +161,63 @@ class ConversationEngine:
         self.session_manager.add_message(user_id, "assistant", response_text)
 
         return response_text
+    
+    
+    def process_user_message_stream(self, user_id: str, text: str, mode: str = "chat"):
+        # --- 다이어리 ---
+        # 생성 확인 (Y/N)
+        if self.waiting_for_diary_confirm:
+            if text.lower() in ['y', 'yes', '네', '응']:
+                self.waiting_for_diary_confirm = False
+                
+                # 생성 전 대화 내용 확인
+                chat_history = self.session_manager.export_user_history(user_id)
+                if not chat_history or chat_history == "오늘 나눈 대화가 없습니다.":
+                    yield "오늘 나눈 대화가 없어 다이어리를 생성할 수 없습니다."
+                    return
+
+                yield self.generate_diary_summary(user_id)
+                return
+            else:
+                self.waiting_for_diary_confirm = False
+                yield "다이어리 생성을 취소했습니다. 대화를 계속할까요?"
+                return
+            
+        # 다이어리 버튼 트리거 확인
+        if self._check_diary_trigger(text):
+            self.waiting_for_diary_confirm = True
+            yield "오늘 나눈 대화로 다이어리를 생성할까요? (Y/N)"
+            return
+        
+        # --- 일반 대화 처리 ---
+        session = self.session_manager.load_session(user_id)
+        profile = session.get("user_profile", {})
+        
+        config = {"configurable": {"thread_id": user_id}}
+        inputs = {
+            "messages": [HumanMessage(content=text)],
+            "user_profile": profile,
+            "current_mode": mode
+        }
+        
+        self.session_manager.add_message(user_id, "user", text)
+
+        full_response = ""
+        
+        try:
+            # 동기 stream 사용 
+            for msg, metadata in self.app.stream(inputs, config=config, stream_mode="messages"):
+                # 
+                if isinstance(msg, AIMessage) and msg.content:
+                    token = msg.content
+                    full_response += token
+                    yield token
+                        
+        except Exception as e:
+            logger.error(f"Streaming Error: {e}")
+            yield f"오류가 발생했습니다: {str(e)}"
+            return
+        
+        # 대화 저장 (다이어리 소스)
+        if full_response:
+            self.session_manager.add_message(user_id, "assistant", full_response)

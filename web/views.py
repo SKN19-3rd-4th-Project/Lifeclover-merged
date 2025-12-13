@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from django.http import JsonResponse, HttpResponseNotAllowed
+from django.http import JsonResponse, HttpResponseNotAllowed, StreamingHttpResponse
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -87,16 +87,18 @@ def chat_message(request):
                 message = f"[사용자가 '{context}' 정보를 요청함] {message}"
         
         # Process message through conversation engine
-        response_text = engine.process_user_message(user_id, message, mode=mode)
+        response_generator = engine.process_user_message_stream(user_id, message, mode=mode)
         
-        return JsonResponse({"response": response_text})
+        return StreamingHttpResponse(
+            response_generator, 
+            content_type='text/plain' # 단순 텍스트 스트림으로 전송
+        )
     
     except json.JSONDecodeError:
         return JsonResponse({"error": "잘못된 JSON 형식입니다."}, status=400)
     except Exception as e:
         print(f"Chat error: {e}")
         return JsonResponse({"error": f"오류가 발생했습니다: {str(e)}"}, status=500)
-
 
 @require_http_methods(["GET"])
 def get_diaries(request):
