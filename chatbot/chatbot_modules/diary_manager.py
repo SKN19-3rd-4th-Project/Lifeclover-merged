@@ -89,9 +89,8 @@ class DiaryManager:
         """
 
         # 3. LLM 생성 및 파싱
-        raw_response = self.llm_client.generate_text("JSON 형식으로만 답변하세요.", prompt)
-        
         try:
+            raw_response = self.llm_client.generate_text("JSON 형식으로만 답변하세요.", prompt)
             cleaned_response = raw_response.replace("```json", "").replace("```", "").strip()
             data = json.loads(cleaned_response)
             
@@ -102,10 +101,13 @@ class DiaryManager:
             tags = " ".join([f"#{k}" for k in keywords])
             
             final_diary = f"[{display_date}] {emoji} {tags}\n\n{summary}"
-            
         except Exception as e:
-            logger.error(f"다이어리 생성 중 JSON 파싱 실패: {e}")
-            final_diary = f"[{display_date}] 📝 #기록\n\n{raw_response}"
+            logger.error(f"다이어리 생성 중 모델 호출 실패, 단순 요약으로 대체합니다: {e}")
+            # 모델 실패 시 최근 대화 5줄을 단순 요약으로 저장
+            history_lines = chat_history.split("\n")
+            recent = history_lines[-5:] if len(history_lines) > 5 else history_lines
+            simple_summary = "\n".join(recent) if recent else "오늘 대화 기록을 불러오지 못했습니다."
+            final_diary = f"[{display_date}] 📝 #기록\n\n{simple_summary}"
 
         # 4. 저장
         self.session_manager.save_diary_entry(user_id, today_str, final_diary)

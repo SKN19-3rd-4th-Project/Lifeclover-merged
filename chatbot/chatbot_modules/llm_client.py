@@ -1,10 +1,13 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-load_dotenv()
+# 프로젝트 루트(.env)까지 올라가서 환경 변수를 확실히 로드
+ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
+load_dotenv(dotenv_path=ENV_PATH)
 
 # 환경 변수(OPENAI_API_KEY)는 settings.py 또는 실행 환경에서 미리 설정된다고 가정
 api_key = os.getenv("OPENAI_API_KEY")

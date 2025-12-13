@@ -10,10 +10,11 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
-  <div class="app" data-current-page="home">
+  <div class="app" data-current-page="{{ current_page|default:'home' }}">
     {% block content %}{% endblock %}
   </div>
-  <script src="{% static 'js/app.js' %}" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="{% static 'js/app.js' %}?v=2025-12-13-3" defer></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>
