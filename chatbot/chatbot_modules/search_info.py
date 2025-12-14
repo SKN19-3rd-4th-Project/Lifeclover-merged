@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-# import random
 from typing import List
 
 # Pinecone & LangChain
@@ -69,7 +68,6 @@ with open(facilities_file_path, 'r', encoding='utf-8') as f:
     for r_list in facilities_region_list_json.values():
         fac_all_regions.extend(r_list)
     fac_all_regions = sorted(list(set(fac_all_regions)))
-    # print(facilities_region_list_json)
 
 
 # 유사한 지역 반환 함수
@@ -90,6 +88,7 @@ def find_matching_regions(user_input, region_list, n=3):
     
     return matched if matched else None
 
+# 시설 필터링 함수
 def facilities_filtered_search(query, k, filter_dict):
     results = []
     try:
@@ -105,10 +104,21 @@ def facilities_filtered_search(query, k, filter_dict):
 
     return results
 
+
 @tool
 def search_public_funeral_ordinance(query: str, region: str = None):
     """
-    공영장례 조례를 검색합니다.
+    지자체별 '공영장례(무연고/저소득층 장례 지원)' 관련 조례 및 지원 정보를 검색합니다.
+
+    [사용해야 하는 상황]
+    - 사용자가 단순히 공영장례 및 지원 방법에 대해 궁금해할 때.
+    - 사용자가 경제적 어려움으로 장례를 걱정하거나, 가족이 없어 장례를 치러줄 사람이 없을 때.
+    - "돈이 없어서 장례는 어떻게 하지?", "나라에서 장례 도와주는 게 있어?" 등의 질문.
+
+    [검색해야 할 주요 내용]
+    - 지원 대상: 수급자, 차상위계층, 무연고자 등 구체적인 자격 요건 추출.
+    - 지원 내용: 빈소 제공 여부, 장례 물품 지원, 화장 비용 지원 등.
+    - 지역: 지자체별로 조례가 다르므로, 사용자 거주지(시/군/구)가 필수적으로 포함되어야 정확도가 높음.
     
     Args:
         query: 검색어 (예: "지원 대상")
@@ -121,7 +131,6 @@ def search_public_funeral_ordinance(query: str, region: str = None):
     if region:
         region_list = region_list_json["public_funeral_ordinance"]
         matched = find_matching_regions(region, region_list, n=k)  # 여러 개
-        # print(f"공영 장례 조례 매칭된 지역들 최대 {k}개",matched)
         if matched:
             if len(matched) == 1:
                 filter_dict["region"] = matched[0]  # 1개면 직접
@@ -134,7 +143,9 @@ def search_public_funeral_ordinance(query: str, region: str = None):
 @tool
 def search_cremation_subsidy_ordinance(query: str, region: str = None):
     """
-    화장 장려금 조례를 검색합니다.  
+    화장 장려금 조례를 검색합니다.
+    지자체별 '화장(Cremation) 장려금/지원금' 관련 조례를 검색합니다. 화장 시설 이용료의 일부를 지원받을 수 있는지 확인합니다.
+    
     제외 대상에 대한 정보가 말이 뒤죽박죽 되어 이해하기 어려울 경우 다음의 사항을 바탕으로 이해한다.
     1.「장사 등에 관한 법률」 제7조 제2항을 위반한 경우
     2. 다른 법령에 따라 화장에 대한 지원금을 받은 경우
@@ -149,8 +160,7 @@ def search_cremation_subsidy_ordinance(query: str, region: str = None):
     if region:
         region_list = region_list_json["cremation_detail"] + region_list_json["cremation_etcetera"]
         matched = find_matching_regions(region, region_list, n=k)  # 여러 개
-        # print(f"화장 장려금 조례 매칭된 지역들 최대 {k}개",matched)
-
+        
         if matched:
             if len(matched) == 1:
                 filter_dict["region"] = matched[0]  # 1개면 직접
@@ -159,7 +169,6 @@ def search_cremation_subsidy_ordinance(query: str, region: str = None):
 
     results = vectorstore_ordinance.similarity_search(query, k=k, filter=filter_dict)
     
-    # print("툴 검색 결과:",results)
     return results
 
 @tool
@@ -247,7 +256,6 @@ def search_digital_legacy(query: str):
     Args:
         query: 검색어 (예: "카카오톡 탈퇴 시 삭제되는 데이터", "추모 프로필 주요 기능 요약")
     """
-    
     
     results = vectorstore_digital_legacy.similarity_search(query, k=5)
 
