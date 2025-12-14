@@ -63,6 +63,12 @@ with open(ordinance_file_path, 'r', encoding='utf-8') as f:
     
 with open(facilities_file_path, 'r', encoding='utf-8') as f:
     facilities_region_list_json = json.load(f)
+
+    fac_all_regions = []
+
+    for r_list in facilities_region_list_json.values():
+        fac_all_regions.extend(r_list)
+    fac_all_regions = sorted(list(set(fac_all_regions)))
     # print(facilities_region_list_json)
 
 
@@ -83,6 +89,21 @@ def find_matching_regions(user_input, region_list, n=3):
         matched = get_close_matches(user_input, region_list, n=n, cutoff=0.6)
     
     return matched if matched else None
+
+def facilities_filtered_search(query, k, filter_dict):
+    results = []
+    try:
+        results = vectorstore_funeral_facilities.similarity_search(
+            query, 
+            k=k, 
+            filter=filter_dict
+        )
+        print(f"검색 결과 {len(results)}건 반환")
+    except Exception as e:
+        print(f"검색 오류: {e}")
+        return []
+
+    return results
 
 @tool
 def search_public_funeral_ordinance(query: str, region: str = None):
@@ -142,57 +163,71 @@ def search_cremation_subsidy_ordinance(query: str, region: str = None):
     return results
 
 @tool
-def search_funeral_facilities(query: str, region: str = None, regions : List[str] = None):
+def search_funeral_facilities(query: str, regions : List[str] = None, facility_types : List[str] = None):
     """
     장례 관련 시설을 검색할 때 사용합니다. 
-    장례식장, 봉안당, 묘지, 화장시설, 자연장지의 위치를 찾을 때 사용합니다.
-    사용자가 원하는 장례 시설을 검색하고 모든 장례시설을 검색할 땐 장례식장, 봉안당, 묘지, 화장시설, 자연장지 모두를 검색합니다. 
+    장례식장, 봉안당, 묘지, 화장시설, 자연장지의 위치, 전화번호, 시설명을 찾을 때 사용합니다.
+    장례식장은 추가적으로 주차장, 주차가능대수, 빈소수, (식당, 매점, 유족대기실, 장애인편의시설) 여부를 알 수 있습니다.
     
     Args:
         query: 검색 문장 (예: "경기도 수원시 시설 좋은 묘지", "대구 남구 천주교 납골당")
-        region: 지역명, 지역 한 개 검색 시 사용 (예: "경기도 성남시", "경상북도 경주시")
-        regions: 지역명, 지역 여러개 검색 시 사용 (예: ["경기도 의왕시", "경기도 안양시", "경기도 군포시"], ["경상남도 양산시", "경상남도 밀양시"])
-
+        regions: 지역명, (예:["서울시 강남구"], ["경기도 의왕시", "경기도 안양시", "경기도 군포시"], ["경상남도 양산시", "경상남도 밀양시"])
+        facility_types : 시설 유형 (예 : ["장례식장"], ["봉안당", "묘지", "화장시설"])
     """
-    print(f"쿼리 : {query}, 지역 : {region}, 지역들 : {regions}")
-
-    all_regions = []
-    for r_list in facilities_region_list_json.values():
-        all_regions.extend(r_list)
-    all_regions = sorted(list(set(all_regions)))
-
-    results_list = []
-    if regions == None:
-        regions = [region]
-    k = 10 // len(regions)     # 비장의 코드 : 지역 많아지면 시간 느려져서 이렇게 했다. 물론 지역은 최대 3개로(프롬프트를 통해) 제한함.
-
-    for rgn in regions:
-
-        filter_dict = {}
-
-        if rgn: # 하나의 지역
-            matched = find_matching_regions(rgn, all_regions, n=100) 
-            print(f"매칭된 지역: {matched}")
-
-            if matched:         # 매치 없더라도 아무거나 벡터 유사도로 넘겨줄라고 else: continue 안 했다. 
-                if len(matched) == 1:
-                    filter_dict["region"] = matched[0]  
-                else:
-                    filter_dict["region"] = {"$in": matched} 
-
+    print(f"쿼리 : {query}, 지역 : {regions}, 시설유형 : {facility_types}")
+    # 지역이나 시설유형에 따른 반복
+    if regions is None:
+        regions = []
+    if regions == []:
         try:
             results = vectorstore_funeral_facilities.similarity_search(
                 query, 
-                k=k, 
-                filter=filter_dict
+                k=5, 
             )
-            print(f"검색 결과 {len(results)}건 반환")
-            results_list.extend(results)
-            
+            print(f"지역 없는 검색 들어옴.")
         except Exception as e:
             print(f"검색 오류: {e}")
-            continue
-        
+            return []
+        return results
+    
+    if facility_types is None:
+        facility_types = []
+
+    results_list = []
+    k = 10 // len(regions)     # 비장의 코드 : 지역 많아지면 시간 느려져서 이렇게 했다. 물론 지역은 최대 3개로(프롬프트를 통해) 제한함.
+
+    if facility_types != []:
+        k = 10 // len(facility_types)
+
+    filter_dict = {}
+    if regions != [] : 
+        for rgn in regions: # 지역당 실제 리스트 집어넣기
+            matched = find_matching_regions(rgn, fac_all_regions, n=100) 
+            print(f"매칭된 지역: {matched}")
+
+            if matched:         
+                if len(matched) == 1:
+                    filter_dict["region"] = matched[0]  
+                else:
+                    filter_dict["region"] = {"$in": matched}
+            # 지역 둘 이상이면, 시설유형은 프롬프트에 의해 없거나 하나일 테니 여기서 실행.
+            if len(regions) > 1:
+                results = facilities_filtered_search(query, k, filter_dict)
+                results_list.extend(results)
+                
+            else:
+                # 지역이 하나고 시설 유형 있으면
+                if facility_types != []:
+                    for f_type in facility_types:
+                        current_filter = filter_dict.copy()
+                        current_filter["type"] = f_type
+
+                        results = facilities_filtered_search(query, k, current_filter)
+                        results_list.extend(results)
+                else:
+                    # 지역이 하나고 시설 유형 없을 때
+                    results = facilities_filtered_search(query, k, filter_dict)
+                    results_list.extend(results)
         
     unique_results = []
     seen_content = set()
@@ -200,7 +235,7 @@ def search_funeral_facilities(query: str, region: str = None, regions : List[str
         if doc.page_content not in seen_content:
             unique_results.append(doc)
             seen_content.add(doc.page_content)
-
+    print(unique_results)
     # print(f"최종 병합된 검색 결과: {len(unique_results)}건")
     return unique_results
 
