@@ -213,7 +213,3 @@ def search_welldying_wisdom_tool(topic: str) -> str:
     
 # 외부 모듈에서 import 할 수 있도록 TOOLS 리스트 정의
 TOOLS_TALK = [recommend_activities_tool, search_empathy_questions_tool, search_welldying_wisdom_tool, search_from_web_tool]
-
-# Tavily 검색이 유효할 때만 추가
-if tavily_search:
-    TOOLS_TALK.append(tavily_search)
