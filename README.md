@@ -16,10 +16,9 @@
 6. [요구사항 명세서](#%EF%B8%8F%E2%83%A3-%EC%9A%94%EA%B5%AC%EC%82%AC%ED%95%AD-%EB%AA%85%EC%84%B8%EC%84%9C)
 7. [화면 설계서](#️-화면-설계서)
 8. [테스트 계획 및 결과 보고서](#-%ED%85%8C%EC%8A%A4%ED%8A%B8-%EA%B3%84%ED%9A%8D-%EB%B0%8F-%EA%B2%B0%EA%B3%BC-%EB%B3%B4%EA%B3%A0%EC%84%9C)
-9. [3차에서의 개선 사항](#-3차에서의-개선-사항)
-10. [트러블 슈팅](#-%ED%8A%B8%EB%9F%AC%EB%B8%94%EC%8A%88%ED%8C%85)
-11. [수행결과(시연 페이지)](#-%EC%88%98%ED%96%89%EA%B2%B0%EA%B3%BC%EC%8B%9C%EC%97%B0-%ED%8E%98%EC%9D%B4%EC%A7%80)
-12. [한 줄 회고](#%EF%B8%8F-%ED%95%9C-%EC%A4%84-%ED%9A%8C%EA%B3%A0)
+9. [트러블 슈팅](#-%ED%8A%B8%EB%9F%AC%EB%B8%94%EC%8A%88%ED%8C%85)
+10. [수행결과(시연 페이지)](#-%EC%88%98%ED%96%89%EA%B2%B0%EA%B3%BC%EC%8B%9C%EC%97%B0-%ED%8E%98%EC%9D%B4%EC%A7%80)
+11. [한 줄 회고](#%EF%B8%8F-%ED%95%9C-%EC%A4%84-%ED%9A%8C%EA%B3%A0)
 
 <br>
 
@@ -163,6 +162,8 @@
 
 # 📅 WBS
 
+<img src="data/image/WBS.png" width=700>
+
 <br>
 
 ---
@@ -199,21 +200,21 @@
 
 # 🖥️ 화면 설계서
 
-<img src="data/image/start_page.png"><br>
+<img src="data/image/start_page.png" width=700><br>
 
-<img src="data/image/info_page.png"><br>
+<img src="data/image/info_page.png" width=700><br>
 
-<img src="data/image/login_page.png"><br>
+<img src="data/image/login_page.png" width=700><br>
 
-<img src="data/image/signup_page1.png"><br>
+<img src="data/image/signup_page1.png" width=700><br>
 
-<img src="data/image/signup_page2.png"><br>
+<img src="data/image/signup_page2.png" width=700><br>
 
-<img src="data/image/infochat_page.png"><br>
+<img src="data/image/infochat_page.png" width=700><br>
 
-<img src="data/image/chat_page.png"><br>
+<img src="data/image/chat_page.png" width=700><br>
 
-<img src="data/image/diary_page.png"><br>
+<img src="data/image/diary_page.png" width=700><br>
 
 <br>
 
@@ -327,13 +328,7 @@
 
 ---
 
-# 🪜 개선 사항
-
-<br>
-
----
-
-# 🐛 트러블슈팅
+# 🐛 트러블 슈팅
 
 <br>
 
