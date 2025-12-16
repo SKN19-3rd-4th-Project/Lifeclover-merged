@@ -22,7 +22,8 @@ services:
   web:
     build: .
     container_name: lifeclover_web
-    command: python manage.py runserver 0.0.0.0:8000
+    entrypoint: []  # entrypoint.sh 건너뛰기 (개발용)
+    command: python manage.py runserver 0.0.0.0:8000  # 개발: runserver 사용
     volumes:
       - .:/app
       - static_volume:/app/staticfiles
