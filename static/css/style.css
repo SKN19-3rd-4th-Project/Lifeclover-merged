@@ -596,7 +596,7 @@ main {
   padding: 60px 40px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 .hero-container {
