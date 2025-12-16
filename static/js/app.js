@@ -4,8 +4,10 @@ if (window.__LIFECLOVER_APP_INIT__) {
   window.__LIFECLOVER_APP_INIT__ = true;
 
   document.addEventListener('DOMContentLoaded', () => {
+    const appRoot = document.querySelector('.app');
+    const initialPage = appRoot?.dataset?.currentPage || 'home';
     const state = {
-      currentPage: 'home',
+      currentPage: initialPage,
       isLoggedIn: false,
       userName: '회원',
       userProfile: null, // User profile data from login
@@ -40,8 +42,8 @@ if (window.__LIFECLOVER_APP_INIT__) {
     const chatPanels = document.querySelectorAll('[data-chat-panel]');
     const chatInputs = document.querySelectorAll('[data-chat-input]');
     const sendButtons = document.querySelectorAll('[data-send-message]');
-    const quickToggle = document.querySelector('[data-quick-toggle]');
-    const quickPanel = document.querySelector('[data-quick-panel]');
+    const quickToggles = document.querySelectorAll('[data-quick-toggle]');
+    const quickPanels = document.querySelectorAll('[data-quick-panel]');
     const quickItems = document.querySelectorAll('[data-quick-question]');
     const askQuestionChip = document.querySelector('.ask-question-chip');
     const askSwiperEl = document.querySelector('.ask-swiper');
@@ -57,6 +59,40 @@ if (window.__LIFECLOVER_APP_INIT__) {
     const checklistContainer = document.querySelector('[data-checklist]');
     const progressText = document.querySelector('[data-progress-text]');
     const progressBar = document.querySelector('[data-progress-bar]');
+    const hiddenEmojiDates = new Set();
+    const hiddenStorageKey = `hiddenDiaryMarkers:${getCookie('user_uuid') || 'guest'}`;
+
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return '';
+    }
+
+    function loadHiddenEmojiState() {
+      try {
+        const raw = localStorage.getItem(hiddenStorageKey);
+        if (!raw) return;
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) {
+          hiddenEmojiDates.clear();
+          arr.forEach((d) => hiddenEmojiDates.add(d));
+        }
+      } catch (e) {
+        console.warn('hidden emoji state load failed', e);
+      }
+    }
+
+    function persistHiddenEmojiState() {
+      try {
+        localStorage.setItem(hiddenStorageKey, JSON.stringify([...hiddenEmojiDates]));
+      } catch (e) {
+        console.warn('hidden emoji state save failed', e);
+      }
+    }
+
+    // Load hidden state on startup
+    loadHiddenEmojiState();
 
     const formatDateKey = (date) => {
       const y = date.getFullYear();
@@ -66,7 +102,8 @@ if (window.__LIFECLOVER_APP_INIT__) {
     };
 
     let currentMonth = new Date();
-    let selectedDateKey = formatDateKey(new Date());
+    let selectedDateKey = null; // 날짜 선택 전까지 비움
+    let userSelectedDate = false; // 사용자가 직접 클릭/생성했는지 여부
     let checklistLoaded = false;
     const checklistData = [];
     let checklistTotal = 0;
@@ -97,10 +134,13 @@ if (window.__LIFECLOVER_APP_INIT__) {
 
       // Load diaries when switching to diary page
       if (page === 'diary') {
-        // 바로 달력 렌더링해 비어 있어도 구조가 보이도록
+        // 오늘 날짜를 기본 선택으로 맞추고 바로 표시
+        currentMonth = new Date();
+        selectedDateKey = formatDateKey(new Date());
+        userSelectedDate = true;
+        loadHiddenEmojiState();
         renderCalendar();
         loadDiaries();
-        selectedDateKey = formatDateKey(currentMonth);
         renderDiaryDetail();
       }
 
@@ -119,11 +159,9 @@ if (window.__LIFECLOVER_APP_INIT__) {
 
       // Body 스크롤 제어: 대화/정보 탭에서는 전역 스크롤 숨김
       if (bodyEl) {
-        if (state.currentPage === 'chat' || state.currentPage === 'services') {
-          bodyEl.classList.add('chat-mode');
-        } else {
-          bodyEl.classList.remove('chat-mode');
-        }
+        const isChatOrServices = state.currentPage === 'chat' || state.currentPage === 'services';
+        bodyEl.classList.toggle('chat-mode', isChatOrServices);
+        bodyEl.classList.toggle('diary-mode', state.currentPage === 'diary');
       }
     }
 
@@ -145,13 +183,55 @@ if (window.__LIFECLOVER_APP_INIT__) {
       ta.addEventListener('input', () => autoResizeTextarea(ta));
     });
 
+    const scrollPageToBottom = (behavior = 'smooth') => {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior });
+    };
+
+    function typeMarkdown(msg, contentEl, onUpdate, onDone) {
+      const text = msg.content || '';
+      if (!text) return;
+      if (msg._typingTimer) clearTimeout(msg._typingTimer);
+
+      msg._typing = true;
+      let i = Number.isFinite(msg._typedIndex) ? msg._typedIndex : 0;
+
+      const step = () => {
+        const partial = text.slice(0, i + 1);
+        if (typeof marked !== 'undefined') {
+          contentEl.innerHTML = marked.parse(partial);
+          contentEl.classList.add('markdown-body');
+        } else {
+          contentEl.textContent = partial;
+        }
+
+        if (onUpdate) onUpdate();
+
+        if (i >= text.length - 1) {
+          msg._typing = false;
+          msg._typedIndex = text.length - 1;
+          if (msg._typingTimer) {
+            clearTimeout(msg._typingTimer);
+            msg._typingTimer = null;
+          }
+          if (onDone) onDone();
+          return;
+        }
+
+        i += 1;
+        msg._typedIndex = i;
+        msg._typingTimer = setTimeout(step, 18); // 18ms ≈ 55cps
+      };
+
+      step();
+    }
+
     function initAskSwiper() {
       if (!askSwiperEl || !window.Swiper) return;
 
       const swiper = new Swiper(askSwiperEl, {
         spaceBetween: 30,
         centeredSlides: true,
-        loop: true,
+        loop: false,
         autoplay: {
           delay: 3500,
           disableOnInteraction: false,
@@ -419,21 +499,19 @@ if (window.__LIFECLOVER_APP_INIT__) {
       const scrollToBottom = (el) => {
         if (!el) return;
         const last = el.lastElementChild;
-        const doScroll = (behavior = 'smooth') => {
-          el.scrollTo({ top: el.scrollHeight, behavior });
-          if (last?.scrollIntoView) last.scrollIntoView({ behavior, block: 'end' });
+        const doScroll = () => {
+          el.scrollTo({ top: el.scrollHeight, behavior: 'auto' });
+          if (last?.scrollIntoView) last.scrollIntoView({ behavior: 'auto', block: 'end' });
         };
-        // 1) 즉시
-        doScroll('auto');
-        // 2) 렌더 뒤 한번 더
+        // 즉시 + 렌더 직후 두 번만 호출해 빠르게 이동
+        doScroll();
         requestAnimationFrame(() => doScroll());
-        // 3) 느린 케이스 대비 딜레이 한번 더
-        setTimeout(() => doScroll(), 120);
       };
 
       chatPanels.forEach((panel) => {
         const key = panel.dataset.chatPanel;
         const msgEl = panel.querySelector(`[data-chat-messages="${key}"]`);
+        const inputEl = panel.querySelector(`[data-chat-input="${key}"]`);
         if (!msgEl) return;
 
         const messages =
@@ -444,6 +522,10 @@ if (window.__LIFECLOVER_APP_INIT__) {
         msgEl.classList.toggle('has-content', messages.length > 0);
         msgEl.style.display = messages.length ? 'flex' : 'none';
         panel.classList.toggle('is-chatting', messages.length > 0);
+
+        // 입력창 높이에 맞춰 하단 패딩을 동적으로 확보
+        const inputSafe = (inputEl?.offsetHeight || 0) + 32; // 입력창 + 여유
+        msgEl.style.paddingBottom = `${inputSafe}px`;
 
         messages.forEach((msg) => {
           const wrapper = document.createElement('div');
@@ -459,7 +541,30 @@ if (window.__LIFECLOVER_APP_INIT__) {
             <span class="dot"></span>
           `;
           } else {
-            content.textContent = msg.content;
+            const renderMarkdown = () => {
+              if (typeof marked !== 'undefined') {
+                content.innerHTML = marked.parse(msg.content);
+                content.classList.add('markdown-body');
+              } else {
+                content.textContent = msg.content;
+              }
+            };
+
+            if (msg.role === 'bot' && !msg.typed) {
+              // 마크다운을 그대로 사용해 한 글자씩 렌더
+              content.textContent = '';
+              typeMarkdown(
+                msg,
+                content,
+                () => scrollToBottom(msgEl),
+                () => {
+                  msg.typed = true;
+                  scrollToBottom(msgEl);
+                }
+              );
+            } else {
+              renderMarkdown();
+            }
           }
 
           wrapper.appendChild(content);
@@ -551,25 +656,36 @@ if (window.__LIFECLOVER_APP_INIT__) {
           })
         });
 
-        const cloned = response.clone();
-        let rawText = '';
-        let data = null;
-        try {
-          rawText = await cloned.text();
-          data = rawText ? JSON.parse(rawText) : null;
-        } catch (parseErr) {
-          data = null;
-        }
-
         if (!response.ok) {
-          throw new Error((data && data.error) || `HTTP ${response.status}`);
+          throw new Error(`HTTP ${response.status}`);
         }
 
         // Remove loading message
         targetMessages = targetMessages.filter(msg => msg !== loadingMsg);
         setMessages(targetMessages);
 
-        targetMessages.push({ role: 'bot', content: (data && data.response) || '응답이 없습니다.' });
+        // Read streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        // Create bot message object
+        const botMessage = { role: 'bot', content: '', typed: false };
+        targetMessages.push(botMessage);
+
+        // Read stream chunks
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) break;
+
+          // Decode chunk and append to message
+          const chunk = decoder.decode(value, { stream: true });
+          botMessage.content += chunk;
+
+          // Update UI with new content
+          renderMessages();
+        }
+
         // Reset service type after first message in info mode
         if (panelKey === 'services') state.selectedServiceType = null;
       } catch (error) {
@@ -603,9 +719,12 @@ if (window.__LIFECLOVER_APP_INIT__) {
       btn.addEventListener('click', () => sendMessage(key));
     });
 
-    quickToggle?.addEventListener('click', () => {
-      if (!quickPanel) return;
-      quickPanel.classList.toggle('is-open');
+    quickToggles.forEach((toggle) => {
+      const panel = toggle.closest('.quick-wrap')?.querySelector('[data-quick-panel]');
+      toggle.addEventListener('click', () => {
+        if (!panel) return;
+        panel.classList.toggle('is-open');
+      });
     });
 
     const quickExamples = {
@@ -626,13 +745,20 @@ if (window.__LIFECLOVER_APP_INIT__) {
           inputEl.focus();
         }
         sendMessage('services');
-        quickPanel?.classList.remove('is-open');
+        // 해당 패널만 닫기
+        const panel = item.closest('.quick-wrap')?.querySelector('[data-quick-panel]');
+        panel?.classList.remove('is-open');
       });
     });
 
     // Diary functionality
-    async function loadDiaries() {
+    async function loadDiaries(renderDetailAfterLoad = true) {
       diaryEntries = {};
+      // 오늘 날짜를 기본 선택으로 유지
+      const todayKey = formatDateKey(new Date());
+      currentMonth = new Date();
+      userSelectedDate = true;
+      selectedDateKey = todayKey;
       try {
         const response = await fetch('/api/diaries/');
         const data = await response.json();
@@ -652,7 +778,24 @@ if (window.__LIFECLOVER_APP_INIT__) {
         console.error('Error loading diaries:', error);
       } finally {
         renderCalendar(); // 캘린더는 항상 표시
+        if (renderDetailAfterLoad) {
+          renderDiaryDetail(); // 선택된 날짜(오늘)를 기준으로 갱신
+        }
       }
+    }
+
+    function parseDiaryMetadata(content) {
+      if (!content) return { emoji: '📝', tag: '#기록' };
+      const firstLine = content.split('\n')[0] || '';
+      const tokens = firstLine.replace(/[\[\]]/g, '').trim().split(/\s+/);
+      // first token might be date, so find first emoji-like or #tag
+      let emoji = '📝';
+      const tags = [];
+      tokens.forEach((tok) => {
+        if (tok.startsWith('#')) tags.push(tok);
+        else if (tok.length === 2 && tok.match(/\p{Emoji}/u)) emoji = tok;
+      });
+      return { emoji, tag: tags.join(' ') || '#기록' };
     }
 
     async function generateDiary() {
@@ -661,20 +804,43 @@ if (window.__LIFECLOVER_APP_INIT__) {
       const originalText = generateDiaryBtn.textContent;
       generateDiaryBtn.textContent = '생성 중...';
       try {
-        const response = await fetch('/api/diary/generate/', { method: 'POST' });
+        const response = await fetch('/api/diary/generate/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+          credentials: 'same-origin'
+        });
         const data = await response.json();
 
-        if (!response.ok || data.error) {
+        if (!response.ok) {
           const msg = data.error || data.message || '다이어리 생성 중 오류가 발생했습니다.';
           alert(msg);
           return;
         }
 
-        await loadDiaries();
-        selectedDateKey = formatDateKey(new Date());
+        if (data.success === false) {
+          const msg = data.message || data.error || '오늘 나눈 대화가 없어 다이어리를 생성하지 않았습니다.';
+          alert(msg);
+          return;
+        }
+
+        const todayKey = formatDateKey(new Date());
+        const diaryContent = data.diary || '';
+        const meta = parseDiaryMetadata(diaryContent);
+
+        // 캐싱하여 즉시 표시
+        diaryEntries[todayKey] = {
+          emoji: meta.emoji,
+          tag: meta.tag,
+          content: diaryContent
+        };
+
+        selectedDateKey = todayKey;
+        userSelectedDate = true;
         renderCalendar();
         renderDiaryDetail();
         alert('다이어리가 생성되었습니다.');
+        // 최신 목록 동기화 (백엔드 메타데이터 업데이트)
+        loadDiaries(false);
       } catch (error) {
         console.error('Generate diary error:', error);
         alert('다이어리 생성 중 오류가 발생했습니다.');
@@ -709,7 +875,11 @@ if (window.__LIFECLOVER_APP_INIT__) {
       return y === dateObj.getFullYear() && m === dateObj.getMonth() + 1;
     };
 
+    let diaryRenderInProgress = false;
+
     async function renderDiaryDetail() {
+      if (diaryRenderInProgress) return;
+      diaryRenderInProgress = true;
       if (!diaryDetailEl) return;
       diaryDetailEl.innerHTML = '';
 
@@ -722,7 +892,10 @@ if (window.__LIFECLOVER_APP_INIT__) {
       dateEl.textContent = selectedDateKey || '날짜를 선택하세요';
       const tagEl = document.createElement('div');
       tagEl.className = 'diary-tag';
-      tagEl.textContent = selectedDateKey && diaryEntries[selectedDateKey]?.tag ? diaryEntries[selectedDateKey].tag : '#미선택';
+      const tagHidden = selectedDateKey && hiddenEmojiDates.has(selectedDateKey);
+      tagEl.textContent = !selectedDateKey || tagHidden
+        ? '#미선택'
+        : (diaryEntries[selectedDateKey]?.tag || '#미선택');
 
       headerInfo.appendChild(dateEl);
       headerInfo.appendChild(tagEl);
@@ -732,13 +905,24 @@ if (window.__LIFECLOVER_APP_INIT__) {
       closeBtn.className = 'close-btn';
       closeBtn.textContent = '×';
       closeBtn.addEventListener('click', () => {
-        selectedDateKey = null;
+        if (selectedDateKey) {
+          hiddenEmojiDates.add(selectedDateKey);
+          persistHiddenEmojiState();
+        }
         renderDiaryDetail();
         renderCalendar();
       });
 
+      const headerActions = document.createElement('div');
+      headerActions.className = 'diary-header-actions';
+
+      if (generateDiaryBtn) {
+        headerActions.appendChild(generateDiaryBtn);
+      }
+      headerActions.appendChild(closeBtn);
+
       detailHeader.appendChild(headerInfo);
-      detailHeader.appendChild(closeBtn);
+      detailHeader.appendChild(headerActions);
       diaryDetailEl.appendChild(detailHeader);
 
       const contentEl = document.createElement('div');
@@ -749,9 +933,25 @@ if (window.__LIFECLOVER_APP_INIT__) {
         info.textContent = '달력에서 날짜를 눌러 기록을 확인하세요.';
         contentEl.appendChild(info);
       } else {
-        // Load diary content from backend
-        const hasEntry = !!diaryEntries[selectedDateKey];
-        const diaryContent = hasEntry ? await loadDiaryDetail(selectedDateKey) : null;
+        // Load diary content from backend (cache 우선)
+        const cachedContent = diaryEntries[selectedDateKey]?.content;
+        let diaryContent = cachedContent;
+
+        if (hiddenEmojiDates.has(selectedDateKey)) {
+          const info = document.createElement('p');
+          info.textContent = '닫았습니다. 다시 날짜를 누르면 내용을 볼 수 있어요.';
+          contentEl.appendChild(info);
+          diaryDetailEl.appendChild(contentEl);
+          return;
+        }
+
+        if (!diaryContent) {
+          const hasEntry = !!diaryEntries[selectedDateKey];
+          diaryContent = hasEntry ? await loadDiaryDetail(selectedDateKey) : null;
+          if (diaryContent && diaryEntries[selectedDateKey]) {
+            diaryEntries[selectedDateKey].content = diaryContent;
+          }
+        }
 
         if (diaryContent) {
           const lines = diaryContent.split('\n');
@@ -770,10 +970,15 @@ if (window.__LIFECLOVER_APP_INIT__) {
       }
 
       diaryDetailEl.appendChild(contentEl);
+      diaryRenderInProgress = false;
     }
 
     function renderCalendar() {
       if (!calendarGridEl) return;
+      // 사용자가 직접 선택하지 않은 경우에만 선택 초기화
+      if (!userSelectedDate) {
+        selectedDateKey = null;
+      }
       calendarGridEl.innerHTML = '';
 
       ['일', '월', '화', '수', '목', '금', '토'].forEach((day) => {
@@ -799,14 +1004,14 @@ if (window.__LIFECLOVER_APP_INIT__) {
         dayEl.className = 'calendar-day';
 
         if (entry) dayEl.classList.add('has-entry');
-        if (selectedDateKey === dateKey) dayEl.classList.add('selected');
+        if (userSelectedDate && selectedDateKey === dateKey) dayEl.classList.add('selected');
 
         const numberEl = document.createElement('span');
         numberEl.className = 'calendar-day-number';
         numberEl.textContent = String(day);
         dayEl.appendChild(numberEl);
 
-        if (entry?.emoji) {
+        if (entry?.emoji && !hiddenEmojiDates.has(dateKey)) {
           const iconEl = document.createElement('span');
           iconEl.className = 'calendar-day-icon';
           iconEl.textContent = entry.emoji;
@@ -815,6 +1020,11 @@ if (window.__LIFECLOVER_APP_INIT__) {
 
         dayEl.addEventListener('click', () => {
           selectedDateKey = dateKey;
+          userSelectedDate = true;
+          if (hiddenEmojiDates.has(dateKey)) {
+            hiddenEmojiDates.delete(dateKey);
+            persistHiddenEmojiState();
+          }
           renderCalendar();
         });
 
@@ -826,9 +1036,10 @@ if (window.__LIFECLOVER_APP_INIT__) {
 
     function changeMonth(offset) {
       currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
-      if (!selectedDateKey || !isSameMonth(selectedDateKey, currentMonth)) {
+      if (!userSelectedDate || !selectedDateKey || !isSameMonth(selectedDateKey, currentMonth)) {
         const monthEntries = Object.keys(diaryEntries).filter((key) => isSameMonth(key, currentMonth)).sort();
-        selectedDateKey = monthEntries[0] || formatDateKey(currentMonth);
+        selectedDateKey = monthEntries[0] || null;
+        userSelectedDate = false;
       }
       if (monthTitleEl) monthTitleEl.textContent = formatMonthTitle(currentMonth);
       renderCalendar();
