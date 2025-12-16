@@ -141,7 +141,7 @@
 | **Embedding Model** | [![text-embedding-3-small](https://img.shields.io/badge/text--embedding--3--small-00A67D?style=for-the-badge&logo=openai&logoColor=white)](https://platform.openai.com/docs/guides/embeddings) |
 | **Vector DB**       | [![Pinecone](https://img.shields.io/badge/Pinecone-0075A8?style=for-the-badge&logo=pinecone&logoColor=white)](https://www.pinecone.io/) |
 | **Orchestration / RAG** | [![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)](https://www.langchain.com/) [![LangGraph](https://img.shields.io/badge/LangGraph-000000?style=for-the-badge)](https://langchain-ai.github.io/langgraph/) |
-| **Web Framework** | ![Django](https://img.shields.io/badge/DJANGO-092E20?style=for-the-badge&logo=django&logoColor=white) |
+| **Frontend** | ![Django Template](https://img.shields.io/badge/Django%20Template-092E20?style=for-the-badge&logo=django&logoColor=white) ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white) ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white) |
 | **Development Env** | [![VS Code](https://img.shields.io/badge/VS%20Code-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)](https://code.visualstudio.com/) [![Conda](https://img.shields.io/badge/Conda-3EB049?style=for-the-badge&logo=anaconda&logoColor=white)](https://www.anaconda.com/)
 
 <br>
@@ -299,6 +299,69 @@
 ---
 
 # 🐛 트러블 슈팅
+
+### 다이어리 "유령 대화" 기록 현상
+
+- 다이어리를 생성할 때, 사용자가 **로그인한 상태**임에도 불구하고 시스템이 **비회원(게스트)용 ID(쿠키)**로 대화 기록을 
+- 결과 게스트용 대화내용과, 유저의 대화가 합쳐져 기록됨
+
+<details>
+<summary>다이어리 기록 수정</summary>
+
+<br>
+
+파일 위치: web/views.py
+
+**수정 전 (Before)**
+
+- 로그인 여부를 확인하지 않고, 무조건 쿠키 값만 가져옴. 로그인한 유저의 username은 무시.
+
+```
+def generate_diary(request):
+# ... (생략) ...
+
+# [문제 코드]
+# 로그인한 사람도 강제로 '게스트 쿠키 ID'를 사용하게 됨
+user_id = request.COOKIES.get("user_uuid", "guest")
+
+try:
+    engine = get_conversation_engine()
+    # ... (이하 생략) ...
+```
+
+**수정 후 (After)**
+
+- request.user.is_authenticated를 통해 로그인 여부를 먼저 판단.
+
+```
+def generate_diary(request):
+# ... (생략) ...
+
+# [해결 코드]
+# 1. 로그인 상태인지 확인
+if request.user.is_authenticated:
+    # 로그인 했다면: DB에 저장된 'username' 사용 (예: "souluser")
+    user_id = request.user.username
+else:
+    # 로그인 안 했다면: 브라우저 쿠키의 'user_uuid' 사용 (예: "a1b2-c3d4...")
+    user_id = request.COOKIES.get("user_uuid", "guest")
+
+try:
+    engine = get_conversation_engine()
+    # ... (이하 생략) ...
+```
+
+**작업 후 테스트**
+
+<img src="data/image/trouble_shooting1.webp" width=700><br>
+
+<img src="data/image/trouble_shooting2.webp" width=700><br>
+
+→ 로그인 여부에 따른 다이어리 생성 확인
+
+<br>
+
+</details>
 
 <br>
 
