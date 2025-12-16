@@ -1060,7 +1060,12 @@ if (window.__LIFECLOVER_APP_INIT__) {
         const lines = text.trim().split('\n');
         if (lines.length <= 1) throw new Error('No checklist data');
         lines.shift(); // header
-        const splitCsv = (line) => line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map((s) => s.replace(/^"|"$/g, ''));
+        const splitCsv = (line) => {
+          return line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map((s) => {
+            // 앞뒤 공백 제거 후 따옴표 제거
+            return s.trim().replace(/^["']|["']$/g, '');
+          });
+        };
         lines.forEach((line) => {
           const cols = splitCsv(line);
           if (cols.length < 6) return;

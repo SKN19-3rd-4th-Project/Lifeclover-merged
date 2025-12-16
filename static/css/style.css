@@ -119,7 +119,15 @@ main {
 }
 
 .page-section.active[data-page="home"] {
-  display: block !important;
+  display: flex !important;
+}
+
+/* Services: Flex Center */
+.page-section.active[data-page="services"] {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center !important;
+  align-items: center;
 }
 
 .page-section.active[data-page="services"],
