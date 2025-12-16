@@ -146,7 +146,13 @@ def get_diaries(request):
     Returns JSON: {"diaries": [{"date": "YYYY-MM-DD", "emoji": str, "tags": str, "preview": str}]}
     """
     try:
-        user_id = request.COOKIES.get("user_uuid", "guest")
+        
+        # user_id = request.COOKIES.get("user_uuid", "guest")
+        # [수정 후] 이렇게 바꿔야 로그인한 사람의 다이어리를 가져옵니다.
+        if request.user.is_authenticated:
+            user_id = request.user.username
+        else:
+            user_id = request.COOKIES.get("user_uuid", "guest")
         
         # Get conversation engine to access diary manager
         engine = get_conversation_engine()
@@ -166,7 +172,12 @@ def get_diary_detail(request, date):
     Returns JSON: {"date": str, "content": str}
     """
     try:
-        user_id = request.COOKIES.get("user_uuid", "guest")
+        # user_id = request.COOKIES.get("user_uuid", "guest")
+        # [수정 후] 이렇게 바꿔야 상세 내용을 볼 수 있습니다.
+        if request.user.is_authenticated:
+            user_id = request.user.username
+        else:
+            user_id = request.COOKIES.get("user_uuid", "guest")
         
         # Get conversation engine to access session manager
         engine = get_conversation_engine()
@@ -190,10 +201,18 @@ def generate_diary(request):
     Returns JSON: {"success": bool, "diary": str, "message": str}
     """
     try:
-        user_id = request.COOKIES.get("user_uuid", "guest")
+        # [수정 전] 무조건 쿠키에서만 가져오던 코드
+        # user_id = request.COOKIES.get("user_uuid", "guest")
+
+        # [수정 후] 로그인 여부 확인 로직 추가
+        if request.user.is_authenticated:
+            user_id = request.user.username
+        else:
+            user_id = request.COOKIES.get("user_uuid", "guest")
 
         try:
             engine = get_conversation_engine()
+            
         except Exception as e:
             # 엔진 초기화(LLM 키 등) 실패 시 바로 안내
             return JsonResponse({

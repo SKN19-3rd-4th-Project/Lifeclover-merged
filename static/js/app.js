@@ -6,9 +6,7 @@ if (window.__LIFECLOVER_APP_INIT__) {
   document.addEventListener('DOMContentLoaded', () => {
     const appRoot = document.querySelector('.app');
     const initialPage = appRoot?.dataset?.currentPage || 'home';
-
     const authState = window.INITIAL_AUTH_STATE || {};
-
     const state = {
       currentPage: initialPage,
       isLoggedIn: authState.isAuthenticated || false,
@@ -45,8 +43,8 @@ if (window.__LIFECLOVER_APP_INIT__) {
     const chatPanels = document.querySelectorAll('[data-chat-panel]');
     const chatInputs = document.querySelectorAll('[data-chat-input]');
     const sendButtons = document.querySelectorAll('[data-send-message]');
-    const quickToggle = document.querySelector('[data-quick-toggle]');
-    const quickPanel = document.querySelector('[data-quick-panel]');
+    const quickToggles = document.querySelectorAll('[data-quick-toggle]');
+    const quickPanels = document.querySelectorAll('[data-quick-panel]');
     const quickItems = document.querySelectorAll('[data-quick-question]');
     const askQuestionChip = document.querySelector('.ask-question-chip');
     const askSwiperEl = document.querySelector('.ask-swiper');
@@ -137,13 +135,12 @@ if (window.__LIFECLOVER_APP_INIT__) {
 
       // Load diaries when switching to diary page
       if (page === 'diary') {
-        // 바로 달력 렌더링해 비어 있어도 구조가 보이도록
+        // 오늘 날짜를 기본 선택으로 맞추고 바로 표시
+        currentMonth = new Date();
+        selectedDateKey = formatDateKey(new Date());
+        userSelectedDate = true;
         loadHiddenEmojiState();
-        userSelectedDate = false;
-        selectedDateKey = null; // 새로 진입 시 아무 것도 선택하지 않음
-        renderCalendar();
-        loadDiaries();
-        renderDiaryDetail();
+        loadDiaries(true);
       }
 
       if (page === 'chat' && state.messagesChat.length === 0) {
@@ -165,6 +162,9 @@ if (window.__LIFECLOVER_APP_INIT__) {
         bodyEl.classList.toggle('chat-mode', isChatOrServices);
         bodyEl.classList.toggle('diary-mode', state.currentPage === 'diary');
       }
+
+      // 페이지 전환 시 퀵 패널/슬라이더 등의 열림 상태 초기화
+      quickPanels.forEach((panel) => panel.classList.remove('is-open'));
     }
 
     pageTriggers.forEach((btn) => {
@@ -233,7 +233,7 @@ if (window.__LIFECLOVER_APP_INIT__) {
       const swiper = new Swiper(askSwiperEl, {
         spaceBetween: 30,
         centeredSlides: true,
-        loop: true,
+        loop: false,
         autoplay: {
           delay: 3500,
           disableOnInteraction: false,
@@ -513,21 +513,19 @@ if (window.__LIFECLOVER_APP_INIT__) {
       const scrollToBottom = (el) => {
         if (!el) return;
         const last = el.lastElementChild;
-        const doScroll = (behavior = 'smooth') => {
-          el.scrollTo({ top: el.scrollHeight, behavior });
-          if (last?.scrollIntoView) last.scrollIntoView({ behavior, block: 'end' });
+        const doScroll = () => {
+          el.scrollTo({ top: el.scrollHeight, behavior: 'auto' });
+          if (last?.scrollIntoView) last.scrollIntoView({ behavior: 'auto', block: 'end' });
         };
-        // 1) 즉시
-        doScroll('auto');
-        // 2) 렌더 뒤 한번 더
+        // 즉시 + 렌더 직후 두 번만 호출해 빠르게 이동
+        doScroll();
         requestAnimationFrame(() => doScroll());
-        // 3) 느린 케이스 대비 딜레이 한번 더
-        setTimeout(() => doScroll(), 120);
       };
 
       chatPanels.forEach((panel) => {
         const key = panel.dataset.chatPanel;
         const msgEl = panel.querySelector(`[data-chat-messages="${key}"]`);
+        const inputEl = panel.querySelector(`[data-chat-input="${key}"]`);
         if (!msgEl) return;
 
         const messages =
@@ -538,6 +536,10 @@ if (window.__LIFECLOVER_APP_INIT__) {
         msgEl.classList.toggle('has-content', messages.length > 0);
         msgEl.style.display = messages.length ? 'flex' : 'none';
         panel.classList.toggle('is-chatting', messages.length > 0);
+
+        // 입력창 높이에 맞춰 하단 패딩을 동적으로 확보
+        const inputSafe = (inputEl?.offsetHeight || 0) + 32; // 입력창 + 여유
+        msgEl.style.paddingBottom = `${inputSafe}px`;
 
         messages.forEach((msg) => {
           const wrapper = document.createElement('div');
@@ -596,14 +598,6 @@ if (window.__LIFECLOVER_APP_INIT__) {
         if (state.isLoggedIn && state.preferredName) {
           const name = state.preferredName;
           welcomeMessage = `안녕하세요, ${name}님! 오늘은 좀 어떠신가요?`;
-
-          // 거동 상태나 감정 상태가 있으면 추가 멘트
-          if (state.mobilityStatus || state.emotionStatus) {
-            const statusParts = [];
-            if (state.mobilityStatus) statusParts.push(state.mobilityStatus);
-            if (state.emotionStatus) statusParts.push(state.emotionStatus);
-            welcomeMessage += ` (${statusParts.join(', ')})`;
-          }
 
           welcomeMessage += ' 편하게 말씀해주세요.';
         }
@@ -731,9 +725,12 @@ if (window.__LIFECLOVER_APP_INIT__) {
       btn.addEventListener('click', () => sendMessage(key));
     });
 
-    quickToggle?.addEventListener('click', () => {
-      if (!quickPanel) return;
-      quickPanel.classList.toggle('is-open');
+    quickToggles.forEach((toggle) => {
+      const panel = toggle.closest('.quick-wrap')?.querySelector('[data-quick-panel]');
+      toggle.addEventListener('click', () => {
+        if (!panel) return;
+        panel.classList.toggle('is-open');
+      });
     });
 
     const quickExamples = {
@@ -754,15 +751,20 @@ if (window.__LIFECLOVER_APP_INIT__) {
           inputEl.focus();
         }
         sendMessage('services');
-        quickPanel?.classList.remove('is-open');
+        // 해당 패널만 닫기
+        const panel = item.closest('.quick-wrap')?.querySelector('[data-quick-panel]');
+        panel?.classList.remove('is-open');
       });
     });
 
     // Diary functionality
-    async function loadDiaries() {
+    async function loadDiaries(renderDetailAfterLoad = true) {
       diaryEntries = {};
-      userSelectedDate = false;
-      selectedDateKey = null; // 새로 로드할 때 자동 선택 초기화
+      // 오늘 날짜를 기본 선택으로 유지
+      const todayKey = formatDateKey(new Date());
+      currentMonth = new Date();
+      userSelectedDate = true;
+      selectedDateKey = todayKey;
       try {
         const response = await fetch('/api/diaries/');
         const data = await response.json();
@@ -781,9 +783,10 @@ if (window.__LIFECLOVER_APP_INIT__) {
       } catch (error) {
         console.error('Error loading diaries:', error);
       } finally {
-        selectedDateKey = null; // 로드 이후에도 선택 초기화 유지
         renderCalendar(); // 캘린더는 항상 표시
-        renderDiaryDetail(); // 상세도 초기 상태로 갱신
+        if (renderDetailAfterLoad) {
+          renderDiaryDetail(); // 선택된 날짜(오늘)를 기준으로 갱신
+        }
       }
     }
 
@@ -843,7 +846,7 @@ if (window.__LIFECLOVER_APP_INIT__) {
         renderDiaryDetail();
         alert('다이어리가 생성되었습니다.');
         // 최신 목록 동기화 (백엔드 메타데이터 업데이트)
-        loadDiaries();
+        loadDiaries(false);
       } catch (error) {
         console.error('Generate diary error:', error);
         alert('다이어리 생성 중 오류가 발생했습니다.');
@@ -878,7 +881,11 @@ if (window.__LIFECLOVER_APP_INIT__) {
       return y === dateObj.getFullYear() && m === dateObj.getMonth() + 1;
     };
 
+    let diaryRenderInProgress = false;
+
     async function renderDiaryDetail() {
+      if (diaryRenderInProgress) return;
+      diaryRenderInProgress = true;
       if (!diaryDetailEl) return;
       diaryDetailEl.innerHTML = '';
 
@@ -969,6 +976,7 @@ if (window.__LIFECLOVER_APP_INIT__) {
       }
 
       diaryDetailEl.appendChild(contentEl);
+      diaryRenderInProgress = false;
     }
 
     function renderCalendar() {
@@ -1058,7 +1066,12 @@ if (window.__LIFECLOVER_APP_INIT__) {
         const lines = text.trim().split('\n');
         if (lines.length <= 1) throw new Error('No checklist data');
         lines.shift(); // header
-        const splitCsv = (line) => line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map((s) => s.replace(/^"|"$/g, ''));
+        const splitCsv = (line) => {
+          return line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map((s) => {
+            // 앞뒤 공백 제거 후 따옴표 제거
+            return s.trim().replace(/^["']|["']$/g, '');
+          });
+};
         lines.forEach((line) => {
           const cols = splitCsv(line);
           if (cols.length < 6) return;
@@ -1167,23 +1180,17 @@ if (window.__LIFECLOVER_APP_INIT__) {
 
         if (data.success) {
           alert(data.message || '회원가입이 완료되었습니다!');
-
-          // Update state with profile data from backend
           state.isLoggedIn = true;
           state.userName = username;
           state.userProfile = data.profile || null;
           state.preferredName = data.profile?.preferred_name || username;
           state.mobilityStatus = data.profile?.mobility_display || null;
           state.emotionStatus = data.profile?.emotion_display || null;
-
           renderAuth();
-
-          // Initialize chat with logged-in user profile
           state.messagesChat = [];
           if (state.currentPage === 'chat') {
             initializeChat();
           }
-
           switchPage('home');
         } else {
           alert(data.message || '회원가입에 실패했습니다.');
