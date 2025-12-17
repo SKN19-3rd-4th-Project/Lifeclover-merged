@@ -308,29 +308,7 @@ Lifeclover/
 
 # *️⃣ 요구사항 명세서
 
-**시작 페이지 관리 (SP)**
-
-<img src="data/image/sp.png"><br>
-
-**안내 페이지 관리 (INFO)**
-
-<img src="data/image/info.png"><br>
-
-**채팅 페이지 관리 (CHAT)**
-
-<img src="data/image/chat.png"><br>
-
-**회원 관리 (MBM)**
-
-<img src="data/image/mbm.png"><br>
-
-**세션 관리 (SES)**
-
-<img src="data/image/ses.png"><br>
-
-**비기능 요구 사항 (NFR)**
-
-<img src="data/image/nfr.png"><br>
+[요구사항 명세서 확인](https://www.notion.so/ohgiraffers/2c0649136c118174b7b3ec38096e25eb)
 
 <br>
 
@@ -359,6 +337,8 @@ Lifeclover/
 ---
 
 # 💡 테스트 계획 및 결과 보고서
+
+[테스트 계획 및 결과 보고서](https://www.notion.so/ohgiraffers/2c0649136c1181649346e8a49a8bfd29)
 
 <br>
 
