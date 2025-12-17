@@ -18,7 +18,8 @@
 8. [테스트 계획 및 결과 보고서](#-%ED%85%8C%EC%8A%A4%ED%8A%B8-%EA%B3%84%ED%9A%8D-%EB%B0%8F-%EA%B2%B0%EA%B3%BC-%EB%B3%B4%EA%B3%A0%EC%84%9C)
 9. [트러블 슈팅](#-트러블-슈팅)
 10. [수행결과(시연 페이지)](#-%EC%88%98%ED%96%89%EA%B2%B0%EA%B3%BC%EC%8B%9C%EC%97%B0-%ED%8E%98%EC%9D%B4%EC%A7%80)
-11. [한 줄 회고](#%EF%B8%8F-%ED%95%9C-%EC%A4%84-%ED%9A%8C%EA%B3%A0)
+11. [추후 개선 예정](#-추후-개선-예정)
+12. [한 줄 회고](#%EF%B8%8F-%ED%95%9C-%EC%A4%84-%ED%9A%8C%EA%B3%A0)
 
 <br>
 
@@ -149,6 +150,8 @@
 ---
 
 # 🪢시스템 아키텍처
+
+<img src="data/image/Architecture_Diagram.png">
 
 ### 프로젝트 구조
 
@@ -798,6 +801,30 @@ register_member 함수 내에 login() 호출을 넣어 항상 병행되도록 �
 ---
 
 # 🤖 수행결과(시연 페이지)
+
+<img src="data/image/preview1.png"><br>
+
+<img src="data/image/preview2.png"><br>
+
+<img src="data/image/preview3.png"><br>
+
+<img src="data/image/preview4.png"><br>
+
+<br>
+
+---
+
+# 🪜 추후 개선 예정
+
+- 서비스 안정성과 확장성을 높이기 위해 임베딩 모델 및 DB 구조를 오픈소스 기반과 관리형 인프라(RDS)로 단계적으로 고도화할 계획
+
+<br>
+
+- 사용자 경험 강화를 위해 채팅 기능의 유연성(대화 관리, 신규 채팅 생성)과 디지털 소외계층을 고려한 UI 개선을 지속적으로 보완
+
+<br>
+
+- 사용자 대화 흐름을 기반으로 제공 정보의 범위와 질문 예시를 점진적으로 확장하여, 더 풍부하고 개인화된 상담 경험을 제공
 
 <br>
 
